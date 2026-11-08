@@ -22,6 +22,7 @@
   .brand span { overflow:hidden; text-overflow:ellipsis; }
   .topbtns { display:flex; gap:6px; align-items:center; flex:0 0 auto; }
   .ibtn { width:40px; height:40px; border-radius:12px; border:1.5px solid var(--line); background:var(--card); font-size:18px; display:inline-flex; align-items:center; justify-content:center; padding:0; color:var(--ink); }
+  .ibtn.aa { font-weight:800; font-size:16px; letter-spacing:-.02em; }
   .ibtn.lbl { width:auto; padding:0 12px; font-size:14px; font-weight:600; gap:5px; }
   .ibtn.shopurg { border-color:var(--red); color:var(--red); width:auto; padding:0 10px; font-weight:700; font-size:15px; }
   .tabs.seg { display:grid; grid-template-columns:repeat(var(--n), 1fr); width:100%; }
@@ -132,7 +133,7 @@
   @media (max-width: 760px) {
     .top { padding:10px 12px; gap:8px; }
     .brand b { font-size:20px; } .brand span { font-size:13px; }
-    .toprow { gap:8px; } .topbtns { gap:5px; } .ibtn.lbl { padding:0 8px; font-size:13px; } .mepill { padding:0 10px; font-size:14px; } .brand { flex:0 0 auto; }
+    .toprow { gap:8px; } .brand { display:none !important; } .topbtns { width:100%; justify-content:space-between; } .topbtns { gap:5px; } .ibtn.lbl { padding:0 8px; font-size:13px; } .mepill { padding:0 10px; font-size:14px; } .brand { flex:0 0 auto; }
     .dlong, .dshort { display:none !important; }
     .people { gap:5px; }
     .person { padding:6px 4px; min-height:40px; border-radius:12px; align-items:center; text-align:center; }
@@ -301,9 +302,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794121700"></script>
-<script src="./engine.js?v=1794121700"></script>
-<script>window.VATRA_BUILD="1794121700";</script>
+<script src="./rules.js?v=1794122032"></script>
+<script src="./engine.js?v=1794122032"></script>
+<script>window.VATRA_BUILD="1794122032";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -330,7 +331,9 @@
   // Digital 15 removed from Vatra (Mama, 8 Nov 00:32); the old done docs stay, off the ledger
   const ZOOMS = [1, 1.15, 1.3, 1.5];
   const TEXT_SIZE = { Tata: 1.3 }; // bigger text on Norbert's phone, no button needed (Mama, 8 Nov 01:51)
-  const zoomNow = () => { if (S.me && TEXT_SIZE[S.me] && S.me !== "Board") return TEXT_SIZE[S.me]; let z = 1; try { z = parseFloat(localStorage.getItem("vatra.zoom")) || 1; } catch (e) {} return ZOOMS.includes(z) ? z : 1; };
+  // Aa button is back (Mama, 8 Nov 02:12: "he liked it"); this phone's choice wins, Tata's phone starts at 130 %
+  const zoomNow = () => { let z = 0; try { z = parseFloat(localStorage.getItem("vatra.zoom")) || 0; } catch (e) {} if (ZOOMS.includes(z)) return z; return S.me && TEXT_SIZE[S.me] ? TEXT_SIZE[S.me] : 1; };
+  const zoomNext = () => { const i = ZOOMS.indexOf(zoomNow()); try { localStorage.setItem("vatra.zoom", String(ZOOMS[(i + 1) % ZOOMS.length])); } catch (e) {} render(); };
   const applyText = () => { const st = S.settings || {}; R.dod = Object.assign({}, ORIG_DOD, st.dod || {}); R.short = Object.assign({}, ORIG_SHORT, st.short || {}); };
   const $ = (s) => document.querySelector(s);
   const h = (tag, attrs, ...kids) => {
@@ -1501,7 +1504,8 @@
     const u = shopOpenItems().filter(x => isUrg(x)).length;
     const acts = h("div", { class: "topbtns" }, me,
       h("button", { class: "ibtn lbl", title: "Ask", onclick: askSheet }, "🙋 Ask"),
-      h("button", { class: "ibtn lbl" + (u ? " shopurg" : ""), title: "Shopping list", onclick: shopSheet }, u ? "🛒 Shop " + u + "!" : "🛒 Shop"));
+      h("button", { class: "ibtn lbl" + (u ? " shopurg" : ""), title: "Shopping list", onclick: shopSheet }, u ? "🛒 Shop " + u + "!" : "🛒 Shop"),
+      isBoard() ? null : h("button", { class: "ibtn aa", title: "Text size · " + Math.round(zoomNow() * 100) + "%", onclick: zoomNext }, "Aa"));
     // ⋯ menu removed (Mama, 8 Nov 01:51): no Ideas / Rewards / Import on screen; text size is set per person (TEXT_SIZE)
     return h("div", { class: "top" },
       h("div", { class: "toprow" }, h("div", { class: "brand" }, h("b", {}, "Vatra"), h("span", { class: "dlong" }, fmtDay(S.today).replace(/, \d{4}$/, "") + " · " + nowHM()), h("span", { class: "dshort" }, new Date(S.today + "T12:00").toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" }))), acts),
