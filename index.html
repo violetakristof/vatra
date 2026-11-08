@@ -312,9 +312,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794125935"></script>
-<script src="./engine.js?v=1794125935"></script>
-<script>window.VATRA_BUILD="1794125935";</script>
+<script src="./rules.js?v=1794126177"></script>
+<script src="./engine.js?v=1794126177"></script>
+<script>window.VATRA_BUILD="1794126177";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -2057,15 +2057,25 @@
     const g = h("div", { style: "display:grid;grid-template-columns:56px repeat(" + cols.length + ", minmax(0,1fr));gap:0;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;font-size:12px" });
     g.appendChild(h("div"));
     for (const p of cols) g.appendChild(h("div", { style: "padding:8px;font-weight:700;border-left:1px solid var(--soft);font-size:13px" }, R.people[p].label));
-    const tileEl = (a) => { const st = state(a);
-      const bg = st === "cancelled" ? "background:transparent;color:#A39C92;text-decoration:line-through;border-style:dashed" : st === "done" ? "background:var(--greenbg);border-color:var(--green)" : st === "overdue" ? "background:var(--red);color:#fff;border-color:var(--red)" : (st === "locked" || st === "future" || ((a.date || a.due) && (a.date || a.due) > S.today && st !== "cancelled")) ? "background:var(--soft);color:#8C857B" : ""; /* any job on a later day is grey, Finisher included (Mama, 8 Nov 03:14) */
+    /* One colour rule for the week board (Mama, 8 Nov 03:19): look at the day the tile is shown on.
+       green = done · crossed out = cancelled · red = that day is over and it wasn't done
+       white = today, still open · grey = a later day, not open yet. Zones are judged per day. */
+    const LOOK = { done: "background:var(--greenbg);border-color:var(--green)", cancelled: "background:transparent;color:#A39C92;text-decoration:line-through", missed: "background:var(--red);color:#fff;border-color:var(--red)", open: "", later: "background:var(--soft);color:#8C857B", passed: "background:transparent;color:#A39C92" };
+    const lookOf = (a, D) => {
+      if (a.kind === "zone") {
+        const ws = wkDates(W.week); if (!D) return ws[0] > S.today ? "later" : "open";
+        if (S.done[a.id + "@" + D + ":skip"]) return "cancelled"; if (S.done[a.id + "@" + D]) return "done";
+        return D > S.today ? "later" : D < S.today ? (D < "2026-11-03" ? "open" : "missed") : "open"; }
+      const st = state(a); if (st === "cancelled") return "cancelled"; if (st === "done") return "done";
+      const day = D || a.date || a.due, end = a.date || a.due || D; if (day && day > S.today) return "later"; if (end && end < S.today) return a.optional ? "passed" : "missed"; return st === "overdue" ? "missed" : "open"; };
+    const tileEl = (a, D) => { const lk = lookOf(a, D); const bg = LOOK[lk];
       const ov = S.done[a.id + ":override"];
       const t = h("div", { style: "border:1.5px solid var(--line);border-radius:7px;padding:3px 6px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;" + bg }, a.label.replace(" · by 5 pm", ""));
       t.style.boxShadow = "inset 4px 0 0 " + FX[freqOf(a).k][1]; longPress(t, () => sheetFor(a)); if (swapPendingOn(a.id)) t.style.outline = "2px solid var(--amber)";
       t.addEventListener("click", () => isMgr() ? quickPick(a) : isBoard() ? sheetFor(a) : effPerson(a) === S.me ? (swapOpen(a) ? swapSheet(a) : sheetFor(a)) : (swapOpen(a) ? takeSheet(a) : sheetFor(a))); return t; };
     { g.appendChild(h("div", { style: "padding:6px;font-weight:700;color:var(--mute);border-top:1px solid var(--soft)" }, "Zones"));
       for (const p of cols) { const cell = h("div", { style: "padding:5px;border-left:1px solid var(--soft);border-top:1px solid var(--soft);display:flex;flex-direction:column;gap:3px;min-width:0" });
-        for (const a of W.assignments.filter(a => a.kind === "zone" && effPerson(a) === p)) cell.appendChild(tileEl(a)); g.appendChild(cell); } }
+        for (const a of W.assignments.filter(a => a.kind === "zone" && effPerson(a) === p)) cell.appendChild(tileEl(a, null)); g.appendChild(cell); } }
     const rows = wkDates(W.week).map(dt => [E.dow(dt), dt]); // no Wknd row: weekend and week-long jobs sit on their due day (Mama, 8 Nov 02:55)
     const lastDay = rows[rows.length - 1][1];
     const cellItems = (p, date) => W.assignments.filter(a => effPerson(a) === p && a.kind !== "arrival" && a.kind !== "streak" && a.chore !== "putaway" && a.chore !== "roomReset" && !a.bathDay && a.kind !== "zone" && (!a.auto || a.chore === "cook") && (a.date === date || (!a.date && S.done[a.id] && S.done[a.id].date ? S.done[a.id].date === date : (shopFri(a, date) || (!a.date && (a.due === date || (!a.due && date === lastDay)))))));  /* a week/weekend job already done sits on the day it was done (Mama, 8 Nov 03:09) */
@@ -2075,8 +2085,8 @@
       main.appendChild(h("div", { class: "daypick" }, rows.map(([d, date]) => h("button", { class: (S._wkDay === date ? "on" : "") + (date === S.today ? " today" : ""), onclick: () => { S._wkDay = date; render(); } }, h("b", {}, d), date === "wknd" ? "" : h("span", {}, String(+date.slice(8)))))));
       const box = h("div", { class: "daylist" });
       const zs = W.assignments.filter(a => a.kind === "zone");
-      if (S._wkDay !== "wknd" && zs.length) box.appendChild(h("div", { class: "dayrow" }, h("div", { class: "dwho" }, "Zones"), h("div", { class: "jobs" }, zs.map(a => { const t = tileEl(a); t.textContent = a.label + " · " + R.people[effPerson(a)].label; return t; }))));
-      for (const p of cols) { const its = cellItems(p, S._wkDay); box.appendChild(h("div", { class: "dayrow" }, h("div", { class: "dwho" }, R.people[p].label, isMgr() && S._wkDay !== "wknd" && S._wkDay >= S.today && its.length ? h("button", { class: "clrday", onclick: () => clearDaySheet(p, S._wkDay) }, "clear day") : null), h("div", { class: "jobs" }, its.length ? its.map(tileEl) : h("span", { class: "note" }, "free")))); }
+      if (S._wkDay !== "wknd" && zs.length) box.appendChild(h("div", { class: "dayrow" }, h("div", { class: "dwho" }, "Zones"), h("div", { class: "jobs" }, zs.map(a => { const t = tileEl(a, S._wkDay); t.textContent = a.label + " · " + R.people[effPerson(a)].label; return t; }))));
+      for (const p of cols) { const its = cellItems(p, S._wkDay); box.appendChild(h("div", { class: "dayrow" }, h("div", { class: "dwho" }, R.people[p].label, isMgr() && S._wkDay !== "wknd" && S._wkDay >= S.today && its.length ? h("button", { class: "clrday", onclick: () => clearDaySheet(p, S._wkDay) }, "clear day") : null), h("div", { class: "jobs" }, its.length ? its.map(x => tileEl(x, S._wkDay)) : h("span", { class: "note" }, "free")))); }
       main.appendChild(box);
     } else {
     for (const [d, date] of rows) {
@@ -2084,7 +2094,7 @@
       for (const p of cols) {
         const cell = h("div", { style: "padding:5px;border-left:1px solid var(--soft);border-top:1px solid var(--soft);display:flex;flex-direction:column;gap:3px;min-width:0" });
         if (isMgr() && date !== "wknd" && date >= S.today) { const clr = h("button", { class: "clrday", title: "Clear " + R.people[p].label + "'s day", onclick: () => clearDaySheet(p, date) }, "clear day"); cell.appendChild(clr); }
-        for (const a of cellItems(p, date)) cell.appendChild(tileEl(a));
+        for (const a of cellItems(p, date)) cell.appendChild(tileEl(a, date));
         g.appendChild(cell);
       }
     }
