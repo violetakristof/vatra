@@ -100,6 +100,8 @@
   .note { font-size:13px; color:var(--mute); }
   .list { display:flex; flex-direction:column; gap:8px; }
   .li { background:var(--card); border:1.5px solid var(--line); border-radius:12px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .li > div:first-child { flex:1 1 auto; min-width:0; }
+  .li > div:last-child:not(:first-child), .li > button:last-child { flex:0 0 auto; align-self:center; }
   .li .n { font-weight:700; font-size:16px; }
   .li .s { font-size:12px; color:var(--mute); }
   .li.done { background:var(--greenbg); border-color:var(--green); }
@@ -248,8 +250,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js"></script>
-<script src="./engine.js"></script>
+<script src="./rules.js?v=1794118843"></script>
+<script src="./engine.js?v=1794118843"></script>
+<script>window.VATRA_BUILD="1794118843";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -812,7 +815,7 @@
     let tag = null;
     if (lateOpen(a)) { el.classList.add("late"); tag = h("div", { class: "latetag" }, a.chore === "shop" && !isLate() ? "SHOP TODAY · still time for Costco" : "LATE · still counts until 6 am"); }
     else if (state(a) === "overdue") tag = h("div", { class: "redtag" }, "NOT DONE · since " + fmtDay(a.due || a.date).replace(/,.*/, ""));
-    else if (!noMissed && missedYesterday(a)) tag = h("div", { class: "redtag" }, "MISSED " + E.dow(E.addDays(S.today, -1)) + " · counted as not done");
+    else if (false && !noMissed && missedYesterday(a)) tag = h("div", { class: "redtag" }, "MISSED " + E.dow(E.addDays(S.today, -1)) + " · counted as not done");
     if (tag) { const anchor = el.querySelector(".ftag") || el.querySelector(".n") || el.querySelector(".k"); if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(tag, anchor.nextSibling); else el.prepend(tag); }
     return el;
   };
@@ -1680,7 +1683,7 @@
       const mc = a.chore === "bathLight" ? messCount(W.week) : null;
       const mcTxt = mc && Object.keys(mc).length ? "mess: " + Object.keys(mc).map(p => R.people[p].label + " ×" + mc[p]).join(", ") : (a.note || "");
       const z = h("div", { class: "zone " + (zoneToday(a) && st !== "overdue" ? "done" : st) }, h("div", {}, h("div", { class: "k", style: "font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)" }, a.label), nameEl(a, R.people[effPerson(a)].label), h("div", { class: "s", style: "font-size:12px" }, R.short[a.chore] || ""), mcTxt ? h("div", { class: "s", style: "font-size:12px;color:var(--red)" }, mcTxt) : null),
-        a.chore === "bathLight" ? h("button", { class: "btn quiet sm", onclick: messSheet }, "Mess") : null,
+        null,
         h("div", { class: "s", style: "font-size:12px" }, zoneDaysTxt(a)), h("div", { class: "acts" }, zoneActs(a)));
       fx(z, a); markLate(z, a); longPress(z, () => sheetFor(a)); return z;
     }))));
@@ -1998,6 +2001,9 @@
   }
 
   (window.vatraReady || Promise.resolve()).then(boot);
+  // auto-update: when the app comes back to the front, reload if a newer build is live (8 Nov)
+  (function () { const check = () => fetch("./version.txt?t=" + Date.now(), { cache: "no-store" }).then(r => r.ok ? r.text() : null).then(v => { if (v && window.VATRA_BUILD && v.trim() !== window.VATRA_BUILD && !document.querySelector("#sheetbg.on")) location.reload(); }).catch(() => {});
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); }); setInterval(check, 5 * 60000); })();
 })();
 </script>
 </body>
