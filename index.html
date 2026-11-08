@@ -290,9 +290,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794121342"></script>
-<script src="./engine.js?v=1794121342"></script>
-<script>window.VATRA_BUILD="1794121342";</script>
+<script src="./rules.js?v=1794121440"></script>
+<script src="./engine.js?v=1794121440"></script>
+<script>window.VATRA_BUILD="1794121440";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1652,7 +1652,7 @@
   const DOTS = (a) => { const W = V(); const start = R.startDate || ""; const out = []; for (let i = -1; i < 6; i++) { const d = E.addDays(a.week, i); /* dots run Sun to Sat (Mama, 8 Nov 01:45) */ const did = S.done[a.id + "@" + d]; const sk = S.done[a.id + "@" + d + ":skip"]; if (d < start) continue; /* days before the app started: no dot (Mama, 8 Nov 01:43) */ else if (did) out.push(["●", ""]); else if (sk) out.push(["○", "o"]); else if (d < S.today) out.push(["●", "x"]); else if (d === S.today) out.push(["◉", "t"]); else out.push(["○", "o"]); } return h("div", { class: "dots", title: "Sun to Sat" }, out.map(([c, k]) => h("span", { class: k }, c))); };
   function boardView(main) {
     const W = V(), d = S.today;
-    { const hn = houseNight(d); if (hn.hit) { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "House done before 10 🎉", h("div", { style: "font-size:14px;font-weight:500" }, "Everyone finished on time tonight."))); confetti("house:" + d); }
+    { const hn = houseNight(d); if (hn.hit) { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "House done before 10 🎉", h("div", { style: "font-size:14px;font-weight:500" }, "Everyone finished on time tonight."), h("div", { style: "font-size:15px;font-weight:600;margin-top:6px" }, R.order.map(p => R.people[p].label + " " + fireTxt(p)).join("  ·  ")))); confetti("house:" + d); } // 🔥 this week on the Board, inside the House done banner (Mama, 8 Nov 02:03)
       const nb = nineBanner(); if (nb) main.appendChild(nb); }
     const sec = (label, node) => { const s = h("div", {}); s.appendChild(h("div", { class: "label" }, label)); s.appendChild(node); return s; };
     { const sc = swapCards(); if (sc) main.appendChild(sec("Swap requests", sc)); }
