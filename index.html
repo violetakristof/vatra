@@ -1355,7 +1355,46 @@
   // ⋯ in the top bar: text size, rewards, ideas (Mama, 7 Nov 21:15: fewer top buttons)
   function moreSheet() {
     const zb = () => h("button", { class: "btn", onclick: () => { const i = ZOOMS.indexOf(zoomNow()); try { localStorage.setItem("vatra.zoom", String(ZOOMS[(i + 1) % ZOOMS.length])); } catch (e) {} render(); moreSheet(); } }, "Aa Text size · " + Math.round(zoomNow() * 100) + "%");
-    sheet(h("h3", {}, "More"), h("div", { style: "display:flex;flex-direction:column;gap:8px" }, zb(), h("button", { class: "btn quiet", onclick: () => { closeSheet(); rewardSheet(); } }, "🎁 Rewards"), h("button", { class: "btn quiet", onclick: () => { closeSheet(); ideaSheet(); } }, "💡 Idea for Vatra")));
+    sheet(h("h3", {}, "More"), h("div", { style: "display:flex;flex-direction:column;gap:8px" }, zb(), h("button", { class: "btn quiet", onclick: () => { closeSheet(); rewardSheet(); } }, "🎁 Rewards"), h("button", { class: "btn quiet", onclick: () => { closeSheet(); ideaSheet(); } }, "💡 Idea for Vatra"),
+      isMgr() && S.db ? h("button", { class: "btn quiet", onclick: () => { closeSheet(); window.firebase ? importSheet() : exportSheet(); } }, window.firebase ? "📥 Import from old app" : "📤 Export for new app") : null));
+  }
+  // ---------- move to the new app (8 Nov): export in the artifact, import in the Firebase app ----------
+  const MOVE_COLS = ["weeks", "done", "asks", "shop", "rewards", "mess", "ideas", "log", "state", "settings"];
+  function snapOnce(ref) { return new Promise((res, rej) => { let u = null, fired = false; const t = setTimeout(() => { if (!fired) { fired = true; try { u && u(); } catch (e) {} rej(new Error("timeout")); } }, 20000);
+    u = ref.onSnapshot(s => { if (fired) return; fired = true; clearTimeout(t); setTimeout(() => { try { u && u(); } catch (e) {} }, 0); res(s); }, e => { if (!fired) { fired = true; clearTimeout(t); rej(e); } }); }); }
+  function guessId(col, b, i) { if (col === "weeks") return b.week; if (col === "settings") return "main"; if (col === "log") return "log_" + i; return b && b.id ? docId(String(b.id)) : col + "_" + i; }
+  async function exportSheet() {
+    const box = h("textarea", { style: "width:100%;height:220px;font-size:12px", readonly: "readonly" }, "");
+    const msg = h("div", { class: "note" }, "Reading everything…");
+    const copy = h("button", { class: "btn", disabled: "disabled", onclick: async () => { box.select(); try { await navigator.clipboard.writeText(box.value); msg.textContent = "Copied. Now open the new app, ⋯ → Import, and paste."; } catch (e) { document.execCommand("copy"); msg.textContent = "Copied (if not, press Cmd+C now). Then open the new app, ⋯ → Import, and paste."; } } }, "Copy all");
+    sheet(h("h3", {}, "📤 Export for new app"), msg, box, copy); S.sheetKeep = true;
+    const out = { v: 1, at: new Date().toISOString(), cols: {} }; let n = 0;
+    try {
+      for (const c of MOVE_COLS) { const s = await snapOnce(S.db.collection(c)); out.cols[c] = {};
+        s.docs.forEach((d, i) => { const b = d.data(); if (!b || b.deleted) return; out.cols[c][d.id || guessId(c, b, i)] = b; n++; }); }
+      box.value = JSON.stringify(out); copy.removeAttribute("disabled");
+      msg.textContent = n + " records ready (" + MOVE_COLS.map(c => c + " " + Object.keys(out.cols[c]).length).join(", ") + "). Tap Copy all.";
+    } catch (e) { msg.textContent = "Couldn't read: " + e.message; }
+  }
+  function importSheet() {
+    const box = h("textarea", { style: "width:100%;height:220px;font-size:12px", placeholder: "Paste the export here" }, "");
+    const msg = h("div", { class: "note" }, "This replaces everything in the new app with the old app's data.");
+    const go = h("button", { class: "btn", onclick: async () => {
+      let data; try { data = JSON.parse(box.value); } catch (e) { msg.textContent = "That isn't a full export. Copy again."; return; }
+      if (!data || !data.cols) { msg.textContent = "That isn't an export."; return; }
+      go.setAttribute("disabled", "disabled"); const db = S.db; let ops = [], n = 0;
+      const flush = async () => { while (ops.length) { const b = db.batch(); ops.splice(0, 400).forEach(f => f(b)); await b.commit(); } };
+      try {
+        msg.textContent = "Clearing the test data…";
+        for (const c of MOVE_COLS) { const s = await db.collection(c).get(); s.docs.forEach(d => ops.push(b => b.delete(d.ref))); }
+        await flush();
+        msg.textContent = "Writing…";
+        for (const c of MOVE_COLS) for (const id in (data.cols[c] || {})) { const body = data.cols[c][id]; ops.push(b => b.set(db.collection(c).doc(id), body)); n++; }
+        await flush();
+        msg.textContent = "Done: " + n + " records. Reloading…"; setTimeout(() => location.reload(), 1500);
+      } catch (e) { msg.textContent = "Stopped: " + e.message + ". Tap Import again to retry."; go.removeAttribute("disabled"); }
+    } }, "Import");
+    sheet(h("h3", {}, "📥 Import from old app"), msg, box, go); S.sheetKeep = true;
   }
   /* stopwatch removed 7 Nov (unused) */
   setInterval(() => { for (const el of document.querySelectorAll(".sw[data-start]")) { const ms = Date.now() - +el.dataset.start, plan = +el.dataset.plan; const m = Math.floor(ms / 60000), sec = Math.floor((ms % 60000) / 1000);
