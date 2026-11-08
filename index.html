@@ -11,7 +11,9 @@
 <style>
   :root { --bg:#F2EFE9; --card:#FFFFFF; --ink:#1F1B16; --mute:#6B645B; --line:#D9D4CB; --soft:#E9E6E0; --soft2:#C9C3B9; --green:#2F7A4B; --greenbg:#E6F2EA; --red:#B3261E; --amber:#D9A441; --amberbg:#FFF7E6; --amberink:#8A6413; --pink:#FCE4EC; --pink2:#F8BBD0; --pinkink:#5A1030; --warm1:#FFF1E0; --warm2:#FFF1C9; --warm3:#FBE3DC; --warm4:#F6E3B8; --card2:#FBFAF6; --onink:#FFFFFF; }
   /* Dark mode follows the phone setting (Mama, 8 Nov 03:29) */
-  @media (prefers-color-scheme: dark) { :root { --bg:#15120E; --card:#221E19; --ink:#EEE8DE; --mute:#A79F93; --line:#3B352D; --soft:#2D2822; --soft2:#4B443A; --green:#62B57F; --greenbg:#1D3226; --red:#C9372D; --amber:#D9A441; --amberbg:#3A2E12; --amberink:#E8C277; --pink:#3E2331; --pink2:#5C2F46; --pinkink:#F8BBD0; --warm1:#3A2C1C; --warm2:#3A3218; --warm3:#3C2620; --warm4:#3B3020; --card2:#1C1915; --onink:#15120E; } }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#15120E; --card:#221E19; --ink:#EEE8DE; --mute:#A79F93; --line:#3B352D; --soft:#2D2822; --soft2:#4B443A; --green:#62B57F; --greenbg:#1D3226; --red:#C9372D; --amber:#D9A441; --amberbg:#3A2E12; --amberink:#E8C277; --pink:#3E2331; --pink2:#5C2F46; --pinkink:#F8BBD0; --warm1:#3A2C1C; --warm2:#3A3218; --warm3:#3C2620; --warm4:#3B3020; --card2:#1C1915; --onink:#15120E; } }
+  :root[data-theme="dark"] { --bg:#15120E; --card:#221E19; --ink:#EEE8DE; --mute:#A79F93; --line:#3B352D; --soft:#2D2822; --soft2:#4B443A; --green:#62B57F; --greenbg:#1D3226; --red:#C9372D; --amber:#D9A441; --amberbg:#3A2E12; --amberink:#E8C277; --pink:#3E2331; --pink2:#5C2F46; --pinkink:#F8BBD0; --warm1:#3A2C1C; --warm2:#3A3218; --warm3:#3C2620; --warm4:#3B3020; --card2:#1C1915; --onink:#15120E; }
+  :root[data-theme="dark"] { color-scheme: dark; } :root[data-theme="light"] { color-scheme: light; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font-family: Inter, system-ui, sans-serif; -webkit-user-select:none; user-select:none; }
   html { color-scheme: light dark; }
@@ -314,9 +316,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794126685"></script>
-<script src="./engine.js?v=1794126685"></script>
-<script>window.VATRA_BUILD="1794126685";</script>
+<script src="./rules.js?v=1794126818"></script>
+<script src="./engine.js?v=1794126818"></script>
+<script>window.VATRA_BUILD="1794126818";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -345,6 +347,11 @@
   const TEXT_SIZE = { Tata: 1.3 }; // bigger text on Norbert's phone, no button needed (Mama, 8 Nov 01:51)
   // Aa button is back (Mama, 8 Nov 02:12: "he liked it"); this phone's choice wins, Tata's phone starts at 130 %
   const zoomNow = () => { let z = 0; try { z = parseFloat(localStorage.getItem("vatra.zoom")) || 0; } catch (e) {} if (ZOOMS.includes(z)) return z; return S.me && TEXT_SIZE[S.me] ? TEXT_SIZE[S.me] : 1; };
+  /* Light / dark: follows the phone until you tap 🌙/☀️, then this device keeps your choice (Mama, 8 Nov 03:32) */
+  const themeNow = () => { let t = null; try { t = localStorage.getItem("vatra.theme"); } catch (e) {} return t === "dark" || t === "light" ? t : (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); };
+  const themeApply = () => { let t = null; try { t = localStorage.getItem("vatra.theme"); } catch (e) {} if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t); else document.documentElement.removeAttribute("data-theme"); };
+  const themeNext = () => { try { localStorage.setItem("vatra.theme", themeNow() === "dark" ? "light" : "dark"); } catch (e) {} themeApply(); render(); };
+  themeApply();
   const zoomNext = () => { const i = ZOOMS.indexOf(zoomNow()); try { localStorage.setItem("vatra.zoom", String(ZOOMS[(i + 1) % ZOOMS.length])); } catch (e) {} render(); };
   const applyText = () => { const st = S.settings || {}; R.dod = Object.assign({}, ORIG_DOD, st.dod || {}); R.short = Object.assign({}, ORIG_SHORT, st.short || {}); };
   const $ = (s) => document.querySelector(s);
@@ -1557,7 +1564,8 @@
     const acts = h("div", { class: "topbtns" }, me,
       h("button", { class: "ibtn lbl", title: "Ask", onclick: askSheet }, "🙋 Ask"),
       h("button", { class: "ibtn lbl" + (u ? " shopurg" : ""), title: "Shopping list", onclick: shopSheet }, u ? "🛒 Shop " + u + "!" : "🛒 Shop"),
-      isBoard() ? null : h("button", { class: "ibtn aa", title: "Text size · " + Math.round(zoomNow() * 100) + "%", onclick: zoomNext }, "Aa"));
+      isBoard() ? null : h("button", { class: "ibtn aa", title: "Text size · " + Math.round(zoomNow() * 100) + "%", onclick: zoomNext }, "Aa"),
+      h("button", { class: "ibtn", title: themeNow() === "dark" ? "Light mode" : "Dark mode", onclick: themeNext }, themeNow() === "dark" ? "☀️" : "🌙"));
     // ⋯ menu removed (Mama, 8 Nov 01:51): no Ideas / Rewards / Import on screen; text size is set per person (TEXT_SIZE)
     return h("div", { class: "top" },
       h("div", { class: "toprow" }, h("div", { class: "brand" }, h("b", {}, "Vatra"), h("span", { class: "dlong" }, fmtDay(S.today).replace(/, \d{4}$/, "") + " · " + nowHM()), h("span", { class: "dshort" }, new Date(S.today + "T12:00").toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" }))), acts),
