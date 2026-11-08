@@ -312,9 +312,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794125245"></script>
-<script src="./engine.js?v=1794125245"></script>
-<script>window.VATRA_BUILD="1794125245";</script>
+<script src="./rules.js?v=1794125479"></script>
+<script src="./engine.js?v=1794125479"></script>
+<script>window.VATRA_BUILD="1794125479";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -2060,7 +2060,7 @@
     const tileEl = (a) => { const st = state(a);
       const bg = st === "done" ? "background:var(--greenbg);border-color:var(--green)" : st === "overdue" ? "background:var(--red);color:#fff;border-color:var(--red)" : (st === "locked" || st === "future") ? "background:var(--soft);color:#8C857B" : "";
       const ov = S.done[a.id + ":override"];
-      const t = h("div", { style: "border:1.5px solid var(--line);border-radius:7px;padding:3px 6px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;" + bg + (ov ? ";outline:2px dashed var(--ink);outline-offset:-2px" : "") }, a.label.replace(" · by 5 pm", ""));
+      const t = h("div", { style: "border:1.5px solid var(--line);border-radius:7px;padding:3px 6px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;" + bg }, a.label.replace(" · by 5 pm", ""));
       t.style.boxShadow = "inset 4px 0 0 " + FX[freqOf(a).k][1]; longPress(t, () => sheetFor(a)); if (swapPendingOn(a.id)) t.style.outline = "2px solid var(--amber)";
       t.addEventListener("click", () => isMgr() ? quickPick(a) : isBoard() ? sheetFor(a) : effPerson(a) === S.me ? (swapOpen(a) ? swapSheet(a) : sheetFor(a)) : (swapOpen(a) ? takeSheet(a) : sheetFor(a))); return t; };
     { g.appendChild(h("div", { style: "padding:6px;font-weight:700;color:var(--mute);border-top:1px solid var(--soft)" }, "Zones"));
@@ -2068,7 +2068,7 @@
         for (const a of W.assignments.filter(a => a.kind === "zone" && effPerson(a) === p)) cell.appendChild(tileEl(a)); g.appendChild(cell); } }
     const rows = wkDates(W.week).map(dt => [E.dow(dt), dt]); // no Wknd row: weekend and week-long jobs sit on their due day (Mama, 8 Nov 02:55)
     const lastDay = rows[rows.length - 1][1];
-    const cellItems = (p, date) => W.assignments.filter(a => effPerson(a) === p && a.kind !== "arrival" && a.kind !== "streak" && a.chore !== "putaway" && a.chore !== "roomReset" && !a.bathDay && a.kind !== "zone" && (!a.auto || a.chore === "cook") && (a.date === date || shopFri(a, date) || (!a.date && (a.due === date || (!a.due && date === lastDay)))));
+    const cellItems = (p, date) => W.assignments.filter(a => effPerson(a) === p && a.kind !== "arrival" && a.kind !== "streak" && a.chore !== "putaway" && a.chore !== "roomReset" && !a.bathDay && a.kind !== "zone" && (!a.auto || a.chore === "cook") && (a.date === date || (!a.date && S.done[a.id] && S.done[a.id].date ? S.done[a.id].date === date : (shopFri(a, date) || (!a.date && (a.due === date || (!a.due && date === lastDay)))))));  /* a week/weekend job already done sits on the day it was done (Mama, 8 Nov 03:09) */
     // phones: one day at a time, full names (Mama, 8 Nov 02:48 "too cramped")
     if (window.innerWidth < 700 && !isBoard()) {
       const keys = rows.map(r => r[1]); if (!keys.includes(S._wkDay)) S._wkDay = keys.includes(S.today) ? S.today : keys[0];
