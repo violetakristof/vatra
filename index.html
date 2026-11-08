@@ -190,7 +190,8 @@
   .bzone.done { background:var(--greenbg); border-color:var(--green); }
   .bzone.overdue { border-color:var(--red); }
   .bzone .messbtn { margin-left:auto; }
-  .bchain { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px; }
+  .bchain { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:10px; }
+  .bstep.off { background:var(--soft); border-style:dashed; border-color:var(--soft2); opacity:.6; }
   .bstep { background:var(--card); border:1.5px solid var(--line); border-radius:16px; padding:12px 14px; display:flex; flex-direction:column; gap:4px; min-height:110px; position:relative; }
   .bstep .k { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--mute); }
   .bstep .n, .bstep .namebtn { font-size:22px; font-weight:800; line-height:1.1; }
@@ -202,7 +203,7 @@
   .bstep.cancelled .k { text-decoration:line-through; }
   .bstep.active { border:3px solid var(--ink); background:#fff; box-shadow:0 6px 18px rgba(0,0,0,.08); }
   .bstep.active .n, .bstep.active .namebtn { font-size:30px; }
-  .bstep.active .pomo { font-size:20px; padding:12px 14px; border-radius:14px; border-width:2px; width:100%; white-space:normal; box-sizing:border-box; }
+  .bstep.active .pomo { font-size:17px; padding:12px 10px; border-radius:14px; border-width:2px; width:100%; white-space:normal; box-sizing:border-box; }
   .bstep.active .pomo.on { background:var(--ink); color:#fff; }
   .bstep.active .btn:not(.pomo):not(.sm) { font-size:18px; padding:12px 18px; }
   .bstep.overdue { border-color:var(--red); }
@@ -222,7 +223,7 @@
   .bchip.claim { background:var(--amberbg); border-color:var(--amber); }
   .bchip.unassigned { border-style:dashed; }
   body.board .mepill { opacity:.35; }
-  @media (max-width: 760px) { .bzones { grid-template-columns:1fr; } .bchain { grid-template-columns:1fr 1fr; } }
+  @media (max-width: 760px) { .bzones { grid-template-columns:1fr; } .bchain { grid-template-columns:1fr 1fr 1fr; } }
   .latebar { background:#E8892B; color:#fff; border-radius:12px; padding:10px 14px; font-size:14px; line-height:1.45; }
   .latetag { display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.08em; color:#fff; background:#E8892B; border-radius:5px; padding:1px 6px; margin:2px 0; }
   .redtag { display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.08em; color:#fff; background:var(--red); border-radius:5px; padding:1px 6px; margin:2px 0; }
@@ -1597,9 +1598,11 @@
     }))));
     // 2. tonight chain with 🍅 on the active step
     const ev = (role) => W.assignments.find(a => a.kind === "evening" && a.role === role && a.date === d);
-    const order = ["cook", "souschef", "dishes", "finisher"], steps = order.map(ev).filter(Boolean);
+    const order = ["cook", "souschef", "dishes", "finisher"], evSteps = order.map(ev).filter(Boolean);
+    const dp = W.assignments.find(a => a.chore === "dishPrep" && a.date === d);
+    const steps = (dp ? [dp] : []).concat(evSteps);
     const active = steps.find(a => !a.optional && ["pending", "overdue"].includes(state(a)) && !(a.auto && !S.done[a.id + ":override"]));
-    const chain = h("div", { class: "bchain" }, steps.map(a => {
+    const chain = h("div", { class: "bchain" + (steps.length > 4 ? " five" : "") }, (dp ? [] : [h("div", { class: "bstep off" }, h("div", { class: "k" }, "Empty dishwasher + rack"), h("div", { class: "n", style: "color:var(--mute)" }, "—"), h("div", { class: "s" }, "no job on the weekend"))]).concat(steps.map(a => {
       const st = state(a), claimed = a.auto && S.done[a.id + ":override"], isAuto = a.auto && !claimed && !S.done[a.id] && st !== "cancelled", isActive = a === active;
       const t = h("div", { class: "bstep " + (isAuto ? "auto" : st) + (isActive ? " active" : "") + (S.pomo[a.id] ? " running" : "") },
         h("div", { class: "k" }, a.label), isActive ? h("div", { class: "now" }, "Now") : null,
@@ -1607,9 +1610,9 @@
         h("div", { class: "s" }, isAuto ? "fixed role" : sub(a, st)), isActive ? h("div", { class: "s", style: "color:var(--ink)" }, R.short[a.chore] || "") : null,
         a.unassigned ? null : h("div", { class: "acts" }, isAuto ? [S.me !== a.person ? h("button", { class: "btn ghost sm", onclick: () => asWho(R.order.filter(p => p !== a.person), "Who's cooking tonight?", (p) => override(a, p, "claim")) }, "I'll cook") : null, cancelBtn(a, st)] : [].concat(acts(a, st, isActive), unclaimBtn(a, st) || [])));
       fx(t, a); markLate(t, a); longPress(t, () => sheetFor(a)); return t;
-    }));
+    })));
     main.appendChild(sec("Dinner organization", chain));
-    if (isMgr()) { const evs = steps; const allOff = evs.length && evs.every(x => S.done[x.id + ":skip"] || S.done[x.id]);
+    if (isMgr()) { const evs = evSteps; const allOff = evs.length && evs.every(x => S.done[x.id + ":skip"] || S.done[x.id]);
       main.appendChild(h("div", { style: "margin:-6px 0 10px" }, allOff && evs.some(x => S.done[x.id + ":skip"]) ? h("button", { class: "btn quiet sm", onclick: async () => { for (const x of evs) if (S.done[x.id + ":skip"]) await store.deleteDone(x.id + ":skip"); } }, "Dinner is back on") : h("button", { class: "btn quiet sm", style: "border-color:var(--red);color:var(--red)", onclick: noDinner }, "✕ No dinner tonight"))); }
     // 3. everything else as chips; done ones fade out after an hour
     const chips = h("div", { class: "bchips" }), doneChips = h("div", { class: "bchips" });
