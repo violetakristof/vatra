@@ -171,7 +171,6 @@
       else if (gp !== "brother") mk({ kind: "fixed", chore: "grandparents", label: "Grandparents", person: null, note: "nobody free", date, due: date, minutes: 0, counts: false, unassigned: true });
       if (d === "Fri") for (const p of rules.order) mk({ kind: "own", chore: "menu", label: "Menu idea", person: p, date, due: date, minutes: 0, counts: false, own: true, closes: settings.menuCloses });
       for (const p of rules.order) if (p !== "Tata") mk({ kind: "own", chore: "roomReset", label: "My Room Reset", person: p, date, due: date, minutes: B.S, own: true, counts: false, quiet: true });
-      for (const p of rules.order.filter(q => q !== "Corvin")) mk({ kind: "streak", chore: "digital", label: "Digital 15", person: p, date, due: date, minutes: 0, counts: false, own: true });
     });
 
     // ---- weekly shared, Sat-Sun window, due Sunday ----

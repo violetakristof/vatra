@@ -173,6 +173,50 @@
   .swwarn { display:none; gap:6px; align-items:center; flex-wrap:wrap; font-size:12px; font-weight:600; color:var(--red); }
   .late { background:#FFF1E0 !important; border-color:#E8892B !important; box-shadow: inset 5px 0 0 #E8892B !important; }
   .late .k { color:#B35C00 !important; }
+  /* Kitchen board (Mama, 8 Nov 00:32): zones first, big; Tonight chain with 🍅; the rest as chips */
+  body.board .brand span { font-size:18px; font-weight:600; color:var(--ink); }
+  body.board .streaks .chip { font-size:18px; padding:10px 16px; }
+  body.board .pinkbar { font-size:26px; padding:18px; }
+  .bzones { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:14px; }
+  .bzone { background:var(--card); border:2px solid var(--line); border-radius:18px; padding:16px 18px; display:flex; flex-direction:column; gap:8px; min-height:150px; position:relative; }
+  .bzone .k { font-size:13px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--mute); }
+  .bzone .n, .bzone .namebtn { font-size:34px; font-weight:800; line-height:1.05; }
+  .bzone .s { font-size:13px; color:var(--mute); }
+  .bzone .dots { font-size:20px; letter-spacing:3px; color:var(--green); line-height:1; }
+  .bzone .dots .o { color:var(--soft2); } .bzone .dots .x { color:var(--red); } .bzone .dots .t { color:var(--amber); }
+  .bzone .acts { margin-top:auto; display:flex; align-items:center; gap:8px; padding-top:6px; flex-wrap:wrap; }
+  .bzone .tick { font-size:22px; padding:12px 22px; border-radius:14px; }
+  .bzone .tick.on { background:var(--green); border-color:var(--green); color:#fff; }
+  .bzone.done { background:var(--greenbg); border-color:var(--green); }
+  .bzone.overdue { border-color:var(--red); }
+  .bzone .messbtn { margin-left:auto; }
+  .bchain { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px; }
+  .bstep { background:var(--card); border:1.5px solid var(--line); border-radius:16px; padding:12px 14px; display:flex; flex-direction:column; gap:4px; min-height:110px; position:relative; }
+  .bstep .k { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--mute); }
+  .bstep .n, .bstep .namebtn { font-size:22px; font-weight:800; line-height:1.1; }
+  .bstep .s { font-size:12px; color:var(--mute); }
+  .bstep .acts { margin-top:auto; display:flex; gap:8px; padding-top:8px; flex-wrap:wrap; align-items:center; }
+  .bstep.done, .bstep.auto { background:var(--greenbg); border-color:var(--green); }
+  .bstep.locked, .bstep.future, .bstep.cancelled, .bstep.passed { background:var(--soft); border-style:dashed; border-color:var(--soft2); opacity:.75; }
+  .bstep.cancelled .k { text-decoration:line-through; }
+  .bstep.active { border:3px solid var(--ink); background:#fff; box-shadow:0 6px 18px rgba(0,0,0,.08); }
+  .bstep.active .n, .bstep.active .namebtn { font-size:30px; }
+  .bstep.active .pomo { font-size:20px; padding:12px 18px; border-radius:14px; border-width:2px; }
+  .bstep.active .pomo.on { background:var(--ink); color:#fff; }
+  .bstep.active .btn:not(.pomo):not(.sm) { font-size:18px; padding:12px 18px; }
+  .bstep.overdue { border-color:var(--red); }
+  .bstep .now { font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--amberink); background:var(--amberbg); border-radius:999px; padding:2px 8px; align-self:flex-start; }
+  .bchips { display:flex; flex-wrap:wrap; gap:8px; }
+  .bchip { display:flex; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--line); border-radius:14px; padding:8px 12px; font-size:15px; min-height:46px; }
+  .bchip b { font-size:16px; }
+  .bchip .k { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--mute); }
+  .bchip.done { background:var(--greenbg); border-color:var(--green); opacity:.7; }
+  .bchip.overdue { border-color:var(--red); } .bchip.overdue .k { color:var(--red); }
+  .bchip.late { background:var(--amberbg); border-color:var(--amber); }
+  .bchip.claim { background:var(--amberbg); border-color:var(--amber); }
+  .bchip.unassigned { border-style:dashed; }
+  body.board .mepill { opacity:.35; }
+  @media (max-width: 760px) { .bzones { grid-template-columns:1fr; } .bchain { grid-template-columns:1fr 1fr; } }
   .latebar { background:#E8892B; color:#fff; border-radius:12px; padding:10px 14px; font-size:14px; line-height:1.45; }
   .latetag { display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.08em; color:#fff; background:#E8892B; border-radius:5px; padding:1px 6px; margin:2px 0; }
   .redtag { display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.08em; color:#fff; background:var(--red); border-radius:5px; padding:1px 6px; margin:2px 0; }
@@ -208,10 +252,9 @@
   const R = window.VATRA_RULES, E = window.VatraEngine;
   const ORIG_DOD = Object.assign({}, R.dod), ORIG_SHORT = Object.assign({}, R.short); // Mama can edit descriptions (settings/main.dod / .short), 6 Nov 22:48
   // per-device text size (Norbert, 7 Nov): Aa button cycles 100 / 115 / 130 / 150 %
-  // Digital 15 is not a regular job for Corvin (Mama, 7 Nov 18:02)
-  const DIG_OFF = ["Corvin"], DIG_PEOPLE = R.order.filter(p => !DIG_OFF.includes(p));
+  // Digital 15 removed from Vatra (Mama, 8 Nov 00:32); the old done docs stay, off the ledger
   const ZOOMS = [1, 1.15, 1.3, 1.5];
-  const zoomNow = () => { let z = 1; try { z = parseFloat(localStorage.getItem("vatra.zoom")) || 1; } catch (e) {} return ZOOMS.includes(z) ? z : 1; };
+  const zoomNow = () => { let z = 1; try { z = parseFloat(localStorage.getItem("vatra.zoom")) || (localStorage.getItem("vatra.me") === "Board" ? 1.15 : 1); } catch (e) {} return ZOOMS.includes(z) ? z : 1; };
   const applyText = () => { const st = S.settings || {}; R.dod = Object.assign({}, ORIG_DOD, st.dod || {}); R.short = Object.assign({}, ORIG_SHORT, st.short || {}); };
   const $ = (s) => document.querySelector(s);
   const h = (tag, attrs, ...kids) => {
@@ -328,6 +371,8 @@
     await ensureWeek(monday());
     loadPrev();
     render();
+    { let idle = Date.now(); const touch = () => { idle = Date.now(); }; for (const ev of ["pointerdown", "keydown", "touchstart"]) document.addEventListener(ev, touch, { passive: true });
+      setInterval(() => { if (isBoard() && S.tab !== "tonight" && Date.now() - idle > 120000 && !$("#sheetbg").classList.contains("on")) { S.tab = "tonight"; render(); } }, 15000); }
     setInterval(() => { const t = todayStr(); if (t !== S.today) { const oldWeek = S.week, oldNext = S.nextWeek; S.today = t; const m = monday(); if (oldWeek && oldWeek.week !== m) { S.prevWeek = oldWeek; S.week = oldNext && oldNext.week === m ? oldNext : null; S.nextWeek = null; } else if (!oldWeek) { S.week = null; } loadPrev(); ensureWeek(m); } render(); }, 30000);
   }
   async function loadPrev() {
@@ -419,7 +464,7 @@
         w.assignments = w.assignments.map(x => x === pickA ? Object.assign({}, x, { person: cover, note: "Corvin's night off" }) : x === defA ? Object.assign({}, x, { person: "Corvin", note: "Corvin's pick" }) : x);
       }
     }
-    w.assignments = w.assignments.filter(x => !(x.chore === "digital" && DIG_OFF.includes(x.person))); // no Digital 15 for Corvin (7 Nov)
+    w.assignments = w.assignments.filter(x => x.chore !== "digital"); // Digital 15 removed (8 Nov)
     // Towels: Mama washed them Sat 7 Nov (a week early); shown done today, dropped from the 9 Nov week (Mama, 7 Nov 18:10)
     // Maya did Kitchen deep this weekend (Mama, 7 Nov 21:42); next one is the 7 Dec week
     if (wkDoc.week === "2026-11-02" && !w.assignments.some(x => x.id === "2026-11-02#kitchenDeep:2026-11-07")) w.assignments.push({ id: "2026-11-02#kitchenDeep:2026-11-07", week: "2026-11-02", kind: "monthly", chore: "kitchenDeep", label: "Kitchen deep", person: "Maya", date: "2026-11-07", due: "2026-11-07", minutes: 90 });
@@ -1312,6 +1357,7 @@
   // ---------- render ----------
   function render() {
     const app = $("#app"); app.innerHTML = ""; document.body.classList.remove("pinkday");
+    document.body.classList.toggle("board", isBoard());
     applyText();
     { const z = zoomNow(); $("#app").style.zoom = z === 1 ? "" : z; $("#sheet").style.zoom = z === 1 ? "" : z; }
     if (!S.me) { app.appendChild(whoScreen()); return; }
@@ -1349,7 +1395,7 @@
     const tabList = isBoard() ? [["tonight", "Tonight"], ["week", "This week"], ["sunday", "Weekly review"]] : [["mine", "Mine"], ["tonight", "Tonight"], ["week", "This week"], ["sunday", "Weekly review"]];
     const tabs = h("div", { class: "tabs" }, tabList.map(([k, l]) => h("button", { class: S.tab === k ? "on" : "", onclick: () => { S.tab = k; render(); } }, l)));
     const chipBlock = h("div", { style: "display:flex;flex-direction:column;gap:4px" }, chips, h("div", { style: "font-size:11px;color:var(--mute)" }, "Green = home."));
-    return h("div", { class: "top" }, h("div", { class: "brand" }, h("b", {}, "Vatra"), h("span", {}, fmtDay(S.today) + " · " + nowHM()), h("div", { class: "topbtns" }, S.me ? h("button", { class: "mepill", title: "Switch person", onclick: () => { localStorage.removeItem("vatra.me"); S.me = null; render(); } }, "👤 " + ((R.people[S.me] || {}).label || S.me) + " · switch") : null, h("button", { class: "btn quiet sm", style: "align-self:center", onclick: askSheet }, "🙋 Ask"), (() => { const u = shopOpenItems().filter(x => isUrg(x)).length; return h("button", { class: "btn quiet sm" + (u ? " shopurg" : ""), style: "align-self:center", onclick: shopSheet }, u ? "🛒 Shop " + u + "!" : "🛒 Shop"); })(), h("button", { class: "btn quiet sm", style: "align-self:center", title: "More", onclick: moreSheet }, "⋯"))), (S.tab === "tonight" || S.tab === "sunday") ? h("div") : chipBlock, tabs);
+    return h("div", { class: "top" }, h("div", { class: "brand" }, h("b", {}, "Vatra"), h("span", {}, fmtDay(S.today) + " · " + nowHM()), h("div", { class: "topbtns" }, S.me ? (() => { const sw = () => { localStorage.removeItem("vatra.me"); S.me = null; render(); }; const b = h("button", { class: "mepill", title: isBoard() ? "Hold to change this device" : "Switch person", onclick: isBoard() ? null : sw }, "👤 " + ((R.people[S.me] || {}).label || S.me) + (isBoard() ? "" : " · switch")); if (isBoard()) longPress(b, sw); return b; })() : null, h("button", { class: "btn quiet sm", style: "align-self:center", onclick: askSheet }, "🙋 Ask"), (() => { const u = shopOpenItems().filter(x => isUrg(x)).length; return h("button", { class: "btn quiet sm" + (u ? " shopurg" : ""), style: "align-self:center", onclick: shopSheet }, u ? "🛒 Shop " + u + "!" : "🛒 Shop"); })(), h("button", { class: "btn quiet sm", style: "align-self:center", title: "More", onclick: moreSheet }, "⋯"))), (S.tab === "tonight" || S.tab === "sunday") ? h("div") : chipBlock, tabs);
   }
 
   // ⋯ in the top bar: text size, rewards, ideas (Mama, 7 Nov 21:15: fewer top buttons)
@@ -1513,7 +1559,73 @@
     return t;
   }
 
+  // ---------- Kitchen board (Mama, 8 Nov 00:32): zones first, then the dinner chain with 🍅, then chips ----------
+  const DOTS = (a) => { const W = V(); const start = a.week < R.startDate ? R.startDate : a.week; const out = []; for (let i = 0; i < 7; i++) { const d = E.addDays(a.week, i); const did = S.done[a.id + "@" + d]; const sk = S.done[a.id + "@" + d + ":skip"]; if (d < start) out.push(["·", "o"]); else if (did) out.push(["●", ""]); else if (sk) out.push(["○", "o"]); else if (d < S.today) out.push(["●", "x"]); else if (d === S.today) out.push(["◉", "t"]); else out.push(["○", "o"]); } return h("div", { class: "dots", title: "Mon to Sun" }, out.map(([c, k]) => h("span", { class: k }, c))); };
+  function boardView(main) {
+    const W = V(), d = S.today;
+    { const hn = houseNight(d); if (hn.hit) { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "House done before 10 🎉", h("div", { style: "font-size:14px;font-weight:500" }, "Everyone finished on time tonight."))); confetti("house:" + d); }
+      else main.appendChild(h("div", {}, h("div", { class: "label" }, "Before 10 pm · 🔥 streaks"), streakRow()));
+      const nb = nineBanner(); if (nb) main.appendChild(nb); }
+    const sec = (label, node) => { const s = h("div", {}); s.appendChild(h("div", { class: "label" }, label)); s.appendChild(node); return s; };
+    { const sc = swapCards(); if (sc) main.appendChild(sec("Swap requests", sc)); }
+    { const late = lateList().map(a => (R.people[effPerson(a)] || {}).label + " · " + a.label); if (late.length) main.appendChild(h("div", { class: "latebar" }, h("b", {}, isLate() ? "After 10 pm · still open: " : "Still open: "), late.join(", "), h("div", { style: "font-size:12px;opacity:.9;margin-top:2px" }, "Orange tiles still count for " + fmtDay(d).replace(/,.*/, "") + " until 6 am."))); }
+    // arrival row
+    main.appendChild(h("div", { class: "tile", style: "flex-direction:row;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px" },
+      h("div", { class: "k", style: "flex:0 0 auto" }, "Home?"),
+      h("div", { style: "display:flex;gap:6px;flex-wrap:wrap" }, R.order.map(p => { const a = W.assignments.find(x => x.kind === "arrival" && x.person === p && x.date === d); const on = a && S.done[a.id];
+        return h("button", { class: "btn sm " + (on ? "" : "ghost"), style: on ? "background:var(--green);border-color:var(--green)" : "", onclick: () => arrival(p) }, R.people[p].label + (on ? " ✓" : "")); }))));
+    // 1. zones
+    const zones = W.assignments.filter(a => a.kind === "zone");
+    main.appendChild(sec("Zones this week", h("div", { class: "bzones" }, zones.map(a => {
+      const st = state(a), k = dayId(a), today = zoneToday(a), sk = S.done[k + ":skip"];
+      const mc = a.chore === "bathLight" ? messCount(W.week) : null;
+      const mcTxt = mc && Object.keys(mc).length ? "mess: " + Object.keys(mc).map(p => R.people[p].label + " ×" + mc[p]).join(", ") : (a.note || "");
+      const z = h("div", { class: "bzone " + (today && st !== "overdue" ? "done" : st) },
+        h("div", { class: "k" }, a.label), nameEl(a, R.people[effPerson(a)].label), DOTS(a),
+        h("div", { class: "s" }, R.short[a.chore] || ""), mcTxt ? h("div", { class: "s", style: "color:var(--red)" }, mcTxt) : null,
+        h("div", { class: "acts" }, st === "done" ? h("span", { class: "note" }, "week done") : sk ? [h("span", { class: "note" }, "today cancelled"), isMgr() ? h("button", { class: "btn quiet sm", onclick: () => unskipTile(a) }, "Restore") : null]
+          : today ? [h("button", { class: "btn tick on", onclick: () => store.deleteDone(k) }, "✓ Today"), S.done[k] && S.done[k].covered ? h("span", { class: "note" }, "🛟 " + ((R.people[S.done[k].person] || {}).label || "")) : null]
+          : [h("button", { class: "btn tick ghost", onclick: () => finishDay(a) }, "○ Done today"), isMgr() ? h("button", { class: "btn quiet sm xbtn", onclick: () => skipTile(a) }, "✕") : null],
+          a.carried ? null : messBtn(a)));
+      fx(z, a); markLate(z, a); longPress(z, () => sheetFor(a)); return z;
+    }))));
+    // 2. tonight chain with 🍅 on the active step
+    const ev = (role) => W.assignments.find(a => a.kind === "evening" && a.role === role && a.date === d);
+    const order = ["cook", "souschef", "dishes", "finisher"], steps = order.map(ev).filter(Boolean);
+    const active = steps.find(a => !a.optional && ["pending", "overdue"].includes(state(a)) && !(a.auto && !S.done[a.id + ":override"]));
+    const chain = h("div", { class: "bchain" }, steps.map(a => {
+      const st = state(a), claimed = a.auto && S.done[a.id + ":override"], isAuto = a.auto && !claimed && !S.done[a.id] && st !== "cancelled", isActive = a === active;
+      const t = h("div", { class: "bstep " + (isAuto ? "auto" : st) + (isActive ? " active" : "") + (S.pomo[a.id] ? " running" : "") },
+        h("div", { class: "k" }, a.label), isActive ? h("div", { class: "now" }, "Now") : null,
+        nameEl(a, a.unassigned && !S.done[a.id + ":override"] ? (a.note || "not set") : (R.people[effPerson(a)] || {}).label || "—"),
+        h("div", { class: "s" }, isAuto ? "fixed role" : sub(a, st)), isActive ? h("div", { class: "s", style: "color:var(--ink)" }, R.short[a.chore] || "") : null,
+        a.unassigned ? null : h("div", { class: "acts" }, isAuto ? [S.me !== a.person ? h("button", { class: "btn ghost sm", onclick: () => asWho(R.order.filter(p => p !== a.person), "Who's cooking tonight?", (p) => override(a, p, "claim")) }, "I'll cook") : null, cancelBtn(a, st)] : [].concat(acts(a, st, isActive), unclaimBtn(a, st) || [])));
+      fx(t, a); markLate(t, a); longPress(t, () => sheetFor(a)); return t;
+    }));
+    main.appendChild(sec("Tonight", chain));
+    if (isMgr()) { const evs = steps; const allOff = evs.length && evs.every(x => S.done[x.id + ":skip"] || S.done[x.id]);
+      main.appendChild(h("div", { style: "margin:-6px 0 10px" }, allOff && evs.some(x => S.done[x.id + ":skip"]) ? h("button", { class: "btn quiet sm", onclick: async () => { for (const x of evs) if (S.done[x.id + ":skip"]) await store.deleteDone(x.id + ":skip"); } }, "Dinner is back on") : h("button", { class: "btn quiet sm", style: "border-color:var(--red);color:var(--red)", onclick: noDinner }, "✕ No dinner tonight"))); }
+    // 3. everything else as chips; done ones fade out after an hour
+    const chips = h("div", { class: "bchips" });
+    const fresh = (a) => { const dd = S.done[a.id]; return !dd || !dd.at || Date.now() - new Date(dd.at) < 3600000; };
+    const todays = W.assignments.filter(a => (a.kind === "fixed" || (a.kind === "laundry" && !a.own)) && a.date === d);
+    for (const a of todays) {
+      const st = state(a); if (st === "done" && !fresh(a)) continue;
+      const un = a.unassigned && !S.done[a.id + ":override"];
+      const claimers = a.kind === "laundry" ? (a.claimable || []).filter(p => p !== effPerson(a)) : [];
+      const claim = st === "pending" && claimers.length;
+      const c = h("div", { class: "bchip " + (un ? "unassigned" : claim ? "claim" : st) }, h("div", {}, h("div", { class: "k" }, a.label), h("b", {}, un ? (a.note || "not set") : R.people[effPerson(a)].label), h("div", { class: "s", style: "font-size:11px;color:var(--mute)" }, un ? "this week" : claim ? claimers.map(p => R.people[p].label).join(", ") + " can claim" : sub(a, st))),
+        un ? null : h("div", { style: "display:flex;gap:4px" }, claim ? [h("button", { class: "btn sm", onclick: () => asWho(claimers, "Who's folding?", (p) => override(a, p, "claim")) }, "Claim"), ...acts(a, st)] : acts(a, st)));
+      fx(c, a); markLate(c, a); longPress(c, () => sheetFor(a)); chips.appendChild(c);
+    }
+    { const open = shopOpenItems(), u = open.filter(x => isUrg(x)).length; const c = h("div", { class: "bchip " + (u ? "overdue" : "") }, h("div", {}, h("div", { class: "k" }, "🛒 Shopping"), h("b", {}, open.length + " items" + (u ? " · " + u + " urgent" : ""))), h("button", { class: "btn sm", onclick: shopSheet }, "Open list")); chips.appendChild(c); }
+    main.appendChild(sec("Today", chips));
+    main.appendChild(h("div", { class: "note", style: "text-align:right;font-size:11px" }, "Kitchen board · hold the 👤 pill to change this device"));
+    const od = overdueList();
+    if (od.length) main.appendChild(h("div", { class: "redrow", style: "background:var(--red);color:#fff;border-radius:12px;padding:10px 14px;gap:16px;flex-wrap:wrap;font-size:14px" }, od.map(o => h("span", {}, h("b", {}, R.people[o.person].label), " · " + o.what))));
+  }
   function tonight(main) {
+    if (isBoard()) return boardView(main);
     { const hn = houseNight(S.today); if (hn.hit) { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "House done before 10 🎉", h("div", { style: "font-size:13px;font-weight:500" }, "Everyone finished on time tonight."))); confetti("house:" + S.today); }
       const nb = nineBanner(); if (nb) main.appendChild(nb);
       main.appendChild(h("div", {}, h("div", { class: "label" }, "Before 10 pm · 🔥 streaks"), streakRow())); }
@@ -1533,7 +1645,7 @@
       })));
     longPress(arrTile, () => sheet(h("h3", {}, "Arrival"), h("p", {}, R.dod.arrival)));
     { const sc = swapCards(); if (sc) main.appendChild(sec("Swap requests", sc)); }
-    { const late = lateList().map(a => (R.people[effPerson(a)] || {}).label + " · " + a.label).concat(isLate() ? DIG_PEOPLE.filter(p => !digDone(p)).map(p => R.people[p].label + " · Digital 15") : []); if (late.length) main.appendChild(h("div", { class: "latebar" }, h("b", {}, isLate() ? "After 10 pm · still open: " : "Still open: "), late.join(", "), h("div", { style: "font-size:12px;opacity:.9;margin-top:2px" }, "Orange tiles still count for " + fmtDay(S.today).replace(/,.*/, "") + " until 6 am."))); }
+    { const late = lateList().map(a => (R.people[effPerson(a)] || {}).label + " · " + a.label); if (late.length) main.appendChild(h("div", { class: "latebar" }, h("b", {}, isLate() ? "After 10 pm · still open: " : "Still open: "), late.join(", "), h("div", { style: "font-size:12px;opacity:.9;margin-top:2px" }, "Orange tiles still count for " + fmtDay(S.today).replace(/,.*/, "") + " until 6 am."))); }
     main.appendChild(sec("First, when you get home", arrTile));
     main.appendChild(sec("Tonight", row));
     if (isMgr()) { const evs = W.assignments.filter(x => x.kind === "evening" && x.date === d && ["cook", "souschef", "dishes", "finisher"].includes(x.role));
@@ -1579,7 +1691,6 @@
         : open && mineA && !S.done[mineA.id] ? h("div", { class: "acts" }, h("button", { class: "btn ghost sm", onclick: () => finish(mineA) }, "Mine's away")) : null);
       strip.appendChild(s);
     }
-    strip.appendChild(digitalTile());
     strip.appendChild(shopTile());
     // the "Weekend jobs N of N" tile is gone: tap a name in the streak row instead (Mama, 7 Nov 21:15)
     main.appendChild(sec("Today", strip));
@@ -1589,52 +1700,8 @@
   }
 
   /* laundryTile removed 7 Nov (unused) */
-  // ---------- Digital 15: daily, 15-minute countdown, quiet, off the ledger ----------
-  const DIG_FOCUS = { Mon: "Photos: delete blurry shots and duplicates, favourite the keepers.", Tue: "Email: unsubscribe from three senders, archive, get the inbox down.", Wed: "Downloads and desktop: delete or file everything.", Thu: "Scans and documents: inbox into the Library, rename what you keep.", Fri: "Apps: delete the ones you don't use, tidy the home screen.", Sat: "Notes and messages: delete old ones, keep what matters in one place.", Sun: "Cloud and storage: check space, clear big files and old backups." };
-  const digKey = (p, d) => `digital:${p}:${d || S.today}`;
-  const digDone = (p, d) => !!S.done[digKey(p, d)];
-  async function digFinish(p) {
-    const k = digKey(p), started = S.running[k]; let measured = null;
-    if (started) { measured = Math.min(240, Math.max(1, Math.round((Date.now() - started) / 60000))); delete S.running[k]; localStorage.setItem("vatra.running", JSON.stringify(S.running)); }
-    await store.writeDone(k, { id: k, chore: "digital", person: p, minutes: 0, counts: false, measured, date: S.today, week: monday(), at: new Date().toISOString() });
-  }
-  // at 15:00 the day counts, and the clock keeps going while someone is in the flow
-  async function digGoal(p) { const k = digKey(p); if (digDone(p)) return; await store.writeDone(k, { id: k, chore: "digital", person: p, minutes: 0, counts: false, measured: 15, flow: true, date: S.today, week: monday(), at: new Date().toISOString() }); }
-  async function digStop(p) { const k = digKey(p), started = S.running[k]; const measured = started ? Math.min(240, Math.max(15, Math.round((Date.now() - started) / 60000))) : 15; delete S.running[k]; localStorage.setItem("vatra.running", JSON.stringify(S.running)); await store.writeDone(k, Object.assign({}, S.done[k] || {}, { id: k, chore: "digital", person: p, minutes: 0, counts: false, measured, flow: false, date: S.today, week: monday(), at: new Date().toISOString() })); }
-  function digStart(p) { S.running[digKey(p)] = Date.now(); localStorage.setItem("vatra.running", JSON.stringify(S.running)); render(); }
-  function digSheet() {
-    const d = E.dow(S.today);
-    sheet(h("h3", {}, "Digital 15"), h("p", {}, h("b", {}, "Today's focus: "), DIG_FOCUS[d]), h("p", { class: "note" }, "Any day, anything on this list counts. Phone, laptop, on the metro."),
-      h("div", { class: "list" }, Object.entries(DIG_FOCUS).map(([k, v]) => h("div", { class: "li" + (k === d ? " done" : "") }, h("div", {}, h("div", { class: "n" }, k), h("div", { class: "s", style: "color:var(--ink)" }, v))))));
-  }
-  function digActs(p) {
-    const st = S.running[digKey(p)];
-    if (digDone(p) && st) return [h("span", { class: "note" }, "15 ✓ · in the flow"), h("span", { class: "sw", "data-start": String(st), "data-plan": "0" }, ""), h("button", { class: "btn", onclick: () => digStop(p) }, "Stop")];
-    if (digDone(p)) { const m = (S.done[digKey(p)] || {}).measured; return [h("span", { class: "note" }, "today ✓" + (m && m > 15 ? " · " + m + " min" : "")), h("button", { class: "btn quiet sm", onclick: () => store.deleteDone(digKey(p)) }, "Undo")]; }
-    if (st) return [h("span", { class: "cd", "data-until": String(st + 15 * 60000), "data-who": p, style: "font-variant-numeric:tabular-nums;font-weight:700;align-self:center" }, ""), h("button", { class: "btn", onclick: () => digFinish(p) }, "Done")];
-    return [h("button", { class: "btn ghost", onclick: () => digStart(p) }, "Start 15"), h("button", { class: "btn quiet sm", onclick: () => digFinish(p) }, "Done")];
-  }
-  function digStreak(p) { let n = 0, d = S.today; if (!digDone(p, d)) d = E.addDays(d, -1); while (n < 400 && digDone(p, d)) { n++; d = E.addDays(d, -1); } return n; }
-  function digRow() {
-    const p = S.me, dn = digDone(p);
-    const li = h("div", { class: "li " + (dn ? "done" : "pending") }, h("div", {}, h("div", { class: "n" }, "Digital 15"), h("div", { class: "s" }, "Today's focus: " + DIG_FOCUS[E.dow(S.today)].split(":")[0] + " · streak " + digStreak(p)), h("div", { class: "s", style: "color:var(--ink)" }, "15 minutes of digital declutter. Hold for the list.")),
-      h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end" }, digActs(p)));
-    li.classList.add("fx-daily", "habit"); li.querySelector(".n").after(h("div", { class: "ftag daily" }, "Daily"), h("div", { class: "ktag" }, "Habit · no red"), ...(isLate() && !dn ? [h("div", { class: "latetag" }, "LATE · still counts until 6 am")] : []));
-    if (isLate() && !dn) li.classList.add("late");
-    longPress(li, digSheet); return li;
-  }
   // countdown ticker: updates every second, finishes at 0:00
-  setInterval(() => { for (const el of document.querySelectorAll(".cd[data-until]")) { const left = +el.dataset.until - Date.now(); if (left <= 0) { el.textContent = "0:00"; const p = el.dataset.who; if (S.running[digKey(p)] && !digDone(p)) digGoal(p); continue; } const m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000); el.textContent = m + ":" + String(sec).padStart(2, "0") + " left"; } }, 1000);
-  function digitalTile() {
-    const n = DIG_PEOPLE.filter(p => digDone(p)).length;
-    const t = h("div", { class: "small " + (!isBoard() && digDone(S.me) ? "done" : "") }, h("div", { class: "k" }, "Digital 15"), h("div", { class: "n" }, n + " of " + DIG_PEOPLE.length + " today"),
-      h("div", { class: "s" }, DIG_PEOPLE.map(p => R.people[p].label + " " + digStreak(p)).join(" · ")),
-      isBoard() || !DIG_PEOPLE.includes(S.me) ? null : h("div", { class: "acts" }, digActs(S.me)));
-    t.classList.add("fx-daily", "habit");
-    const missing = DIG_PEOPLE.filter(p => !digDone(p));
-    if (isLate() && missing.length) { t.classList.add("late"); t.querySelector(".n").after(h("div", { class: "latetag" }, "LATE · " + missing.map(p => R.people[p].label).join(", "))); }
-    longPress(t, digSheet); return t;
-  }
+  setInterval(() => { for (const el of document.querySelectorAll(".cd[data-until]")) { const left = +el.dataset.until - Date.now(); if (left <= 0) { el.textContent = "0:00"; const p = el.dataset.who; continue; } const m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000); el.textContent = m + ":" + String(sec).padStart(2, "0") + " left"; } }, 1000);
 
 
   function mine(main) {
@@ -1666,7 +1733,7 @@
       main.appendChild(h("div", {}, h("div", { class: "label" }, "When you get home"), h("div", { class: "li " + (on ? "done" : "") }, h("div", {}, h("div", { class: "n" }, on ? "Home · done" : "Arrival"), h("div", { class: "s", style: "color:var(--ink)" }, "Coat and shoes in their places · bag unpacked, papers in the paper box · containers and utensils in the dishwasher · dirty clothes in the basket, clean ones hung or put away")), h("button", { class: "btn " + (on ? "quiet sm" : ""), onclick: () => arrival(S.me) }, on ? "Undo" : "I'm home"))));
     }
     const row = (a) => { const st = state(a); const li = h("div", { class: "li " + (a.kind === "zone" && !a.carried && zoneToday(a) && st !== "overdue" ? "done" : st) }, h("div", {}, h("div", { class: "n" }, a.label + (a.carried ? " · from last week" : a.kind === "zone" ? " · every day" : "")), h("div", { class: "s" }, a.kind === "zone" && !a.carried ? zoneDaysTxt(a) : (sub(a, st) || (st === "future" ? "later" : ""))), h("div", { class: "s", style: "color:var(--ink)" }, R.short[a.chore] || "")), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end" }, a.kind === "zone" && !a.carried ? zoneActs(a) : acts(a, st))); fx(li, a); markLate(li, a); longPress(li, () => sheetFor(a)); return li; };
-    main.appendChild(h("div", {}, h("div", { class: "label", style: "color:var(--ink)" }, "Today · " + fmtDay(S.today)), h("div", { class: "list" }, ...(() => { const shopRows = (S.me === "Tata" && (shopOpenItems().some(x => isUrg(x)) || W.assignments.some(x => (x.chore === "shop" || x.chore === "costco") && (x.date === S.today || (!x.date && ["Sat", "Sun"].includes(E.dow(S.today)))))) ? [(() => { const open = shopOpenItems(); const li = h("div", { class: "li" + (open.some(x => isUrg(x)) ? " overdue" : "") }, h("div", {}, h("div", { class: "n" }, "🛒 Shopping list"), h("div", { class: "s" }, open.length + " to buy" + (open.some(x => isUrg(x)) ? " · " + open.filter(x => isUrg(x)).length + " urgent" : "") + (open.some(x => x.meal) ? " · " + open.filter(x => x.meal).length + " meal ideas" : ""))), h("button", { class: "btn", onclick: shopSheet }, "Open")); li.addEventListener("click", (e) => { if (e.target.tagName !== "BUTTON") shopSheet(); }); return li; })()] : []); const digOn = DIG_PEOPLE.includes(S.me), dr = digOn ? digRow() : null, late = digOn && isLate() && !digDone(S.me); const openT = todayList.filter(a => rank(a) < 3), doneT = todayList.filter(a => rank(a) >= 3); const rows = openT.map(row).concat(doneT.length ? [foldBox("✓ Done today (" + doneT.length + ")", doneT.map(row), "_doneOpen")] : []); const nLate = todayList.filter(lateOpen).length; // orange jobs above everything, even the 🛒 row (Mama, 5 Nov 22:08)
+    main.appendChild(h("div", {}, h("div", { class: "label", style: "color:var(--ink)" }, "Today · " + fmtDay(S.today)), h("div", { class: "list" }, ...(() => { const shopRows = (S.me === "Tata" && (shopOpenItems().some(x => isUrg(x)) || W.assignments.some(x => (x.chore === "shop" || x.chore === "costco") && (x.date === S.today || (!x.date && ["Sat", "Sun"].includes(E.dow(S.today)))))) ? [(() => { const open = shopOpenItems(); const li = h("div", { class: "li" + (open.some(x => isUrg(x)) ? " overdue" : "") }, h("div", {}, h("div", { class: "n" }, "🛒 Shopping list"), h("div", { class: "s" }, open.length + " to buy" + (open.some(x => isUrg(x)) ? " · " + open.filter(x => isUrg(x)).length + " urgent" : "") + (open.some(x => x.meal) ? " · " + open.filter(x => x.meal).length + " meal ideas" : ""))), h("button", { class: "btn", onclick: shopSheet }, "Open")); li.addEventListener("click", (e) => { if (e.target.tagName !== "BUTTON") shopSheet(); }); return li; })()] : []); const dr = null, late = false; const openT = todayList.filter(a => rank(a) < 3), doneT = todayList.filter(a => rank(a) >= 3); const rows = openT.map(row).concat(doneT.length ? [foldBox("✓ Done today (" + doneT.length + ")", doneT.map(row), "_doneOpen")] : []); const nLate = todayList.filter(lateOpen).length; // orange jobs above everything, even the 🛒 row (Mama, 5 Nov 22:08)
       return rows.slice(0, nLate).concat(late ? [dr] : [], shopRows, rows.slice(nLate), late || !dr ? [] : [dr]); })())));
     if (keys.length) main.appendChild(h("div", { style: "margin-top:18px;border-top:1px solid var(--line);padding-top:10px" }, foldBox("Later this week (" + keys.reduce((n, k) => n + byDay[k].length, 0) + ")", keys.map(k => { const list = h("div", { class: "list" }); for (const a of byDay[k]) list.appendChild(row(a)); return h("div", {}, h("div", { class: "label", style: "font-size:11px" }, k === "weekend" || k === "this week" ? k : fmtDay(k)), list); }), "_laterOpen")));
     // away days: small, at the bottom, folded
@@ -1765,10 +1832,6 @@
         rows.push(h("div", { class: "li" }, h("div", {}, h("div", { class: "n" }, lab + ": standard " + s0 + " → " + sug + " min?"), h("div", { class: "s" }, xs.length + " answers, mostly " + (slow >= 3 ? "slower" : "faster") + " · middle answer " + med + " min")),
           S.me === "Mama" ? h("div", { style: "display:flex;gap:6px" }, h("button", { class: "btn sm", onclick: () => store.writeSettings({ std: Object.assign({}, STD, { [c]: sug }), stdKeep: Object.assign({}, KEEP, { [c]: S.today }) }) }, "Change"), h("button", { class: "btn quiet sm", onclick: () => store.writeSettings({ stdKeep: Object.assign({}, KEEP, { [c]: S.today }) }) }, "Keep")) : null)); }
       if (rows.length) main.appendChild(sec("Times to adjust", h("div", { class: "list" }, rows))); }
-    // Digital 15
-    { const from = W.week < R.startDate ? R.startDate : W.week; const days = []; for (let d = from; d <= S.today && d <= E.addDays(W.week, 6); d = E.addDays(d, 1)) days.push(d);
-      const best = (p) => { let b = 0, c = 0; const all = Object.values(S.done).filter(x => x && x.chore === "digital" && x.person === p).map(x => x.date).sort(); let prev = null; for (const d of all) { c = prev && E.addDays(prev, 1) === d ? c + 1 : 1; b = Math.max(b, c); prev = d; } return b; };
-      main.appendChild(sec("Digital 15, days done", h("div", { class: "list" }, DIG_PEOPLE.map(p => h("div", { class: "li" }, h("div", { class: "n" }, R.people[p].label), h("div", { class: "s" }, days.filter(d => digDone(p, d)).length + " of " + days.length + " days · now " + digStreak(p) + " · best " + best(p))))))); }
     // My Room Reset, quiet daily tick
     { const resets = W.assignments.filter(a => a.chore === "roomReset" && a.date <= S.today); const by = {};
       for (const a of resets) { const p = effPerson(a); by[p] = by[p] || [0, 0]; by[p][1]++; if (S.done[a.id]) by[p][0]++; }
