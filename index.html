@@ -188,7 +188,18 @@
   .messbtn { white-space:nowrap; }
   #sheet > h3 { padding-right:110px; }
   .shoprow { cursor:pointer; align-items:center; gap:10px; -webkit-user-select:none; user-select:none; }
-  .shoprow .chk { flex:0 0 26px; width:26px; height:26px; border-radius:50%; border:2px solid var(--line); display:flex; align-items:center; justify-content:center; font-weight:800; color:#fff; background:#fff; }
+  .shoprow { padding:9px 12px; }
+  .shoprow > .chk { flex:0 0 28px !important; }
+  .shoprow > .stxt { flex:1 1 auto; min-width:0; font-size:17px; font-weight:600; line-height:1.25; }
+  .shoprow > .stxt .swho { font-size:13px; font-weight:500; color:var(--mute); margin-left:6px; }
+  .shoprow.done > .stxt { text-decoration:line-through; color:var(--mute); font-weight:500; }
+  .shoprow > .more { flex:0 0 auto; border:none; background:none; font-size:20px; color:var(--mute); padding:0 4px; }
+  .shopedit { display:flex; gap:6px; flex-wrap:wrap; padding:6px 4px 2px 40px; }
+  .shopadd { display:flex; gap:8px; } .shopadd input { flex:1; }
+  .shopcats { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .shopcats button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .shopsec { margin-top:14px; } .shopsec .label { display:flex; justify-content:space-between; }
+  .shoprow .chk { flex:0 0 28px; width:28px; height:28px; border-radius:50%; border:2px solid var(--line); display:flex; align-items:center; justify-content:center; font-weight:800; color:#fff; background:#fff; }
   .shoprow.overdue .chk { border-color:var(--red); }
   .shoprow .chk.on { background:#3E7A4F; border-color:#3E7A4F; }
   .pomo { font-variant-numeric:tabular-nums; white-space:nowrap; }
@@ -290,9 +301,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794121440"></script>
-<script src="./engine.js?v=1794121440"></script>
-<script>window.VATRA_BUILD="1794121440";</script>
+<script src="./rules.js?v=1794121620"></script>
+<script src="./engine.js?v=1794121620"></script>
+<script>window.VATRA_BUILD="1794121620";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1041,33 +1052,36 @@
       if (x.amount != null) { const other = runOf(x).find(y => y.id !== x.id); if (other) await store.writeShop(Object.assign({}, other, { amount: (other.amount || 0) + x.amount })); }
       return store.writeShop(Object.assign({}, x, { status: "open", boughtAt: null, boughtDate: null, boughtBy: null, amount: null, extra: false }));
     }
-    asWho(R.order, "Bought: " + x.text, async (p) => { await store.writeShop(Object.assign({}, x, { status: "bought", boughtAt: new Date().toISOString(), boughtDate: S.today, boughtBy: p })); if (!shopOpen) shopSheet(); });
+    const mark = async (p) => { await store.writeShop(Object.assign({}, x, { status: "bought", boughtAt: new Date().toISOString(), boughtDate: S.today, boughtBy: p })); if (!shopOpen) shopSheet(); };
+    if (!isBoard() && S.me) return mark(S.me); // a phone ticks for its owner, no extra question (Mama, 8 Nov 02:04)
+    asWho(R.order, "Bought: " + x.text, mark);
   }
+  // practical checklist (Mama, 8 Nov 02:04 "make it practical for norbert"): tap the row to cross off; ⋯ for list / delete
   function shopRow(x) {
     const bought = x.status === "bought";
-    const tags = [x.extra ? "Extra" : null, bought ? (SHOP_LISTS.find(l => l[0] === listOf(x)) || [0, ""])[1].replace("🔴 ", "") : null].filter(Boolean);
+    const who = (R.people[x.by] || { label: x.by || "" }).label;
     const row = h("div", { class: "li shoprow" + (bought ? " done" : "") + (isUrg(x) && !bought ? " overdue" : ""), role: "checkbox", "aria-checked": bought ? "true" : "false" },
       h("div", { class: "chk" + (bought ? " on" : "") }, bought ? "✓" : ""),
-      h("div", { style: "flex:1;min-width:0" }, h("div", { class: "n", style: bought ? "text-decoration:line-through" : "" }, x.text),
-        h("div", { class: "s" }, [(R.people[x.by] || { label: x.by }).label, tags.join(" · ")].filter(Boolean).join(" · ")),
-        bought && x.boughtBy ? h("div", { class: "s", style: "color:var(--ink);font-weight:600" }, ((R.people[x.boughtBy] || { label: x.boughtBy }).label) + " · " + boughtHM(x)) : null),
-      !bought ? (() => { const sel = h("select", { class: "listsel", "aria-label": "Move to list", onclick: (e) => e.stopPropagation() }, SHOP_LISTS.map(([k, l]) => { const o = h("option", { value: k }, l); if (k === listOf(x)) o.selected = true; return o; })); sel.addEventListener("change", () => setList(x, sel.value)); return sel; })() : null,
-      (x.by === S.me || S.me === "Mama" || S.me === "Tata") ? h("button", { class: "btn quiet sm", onclick: (e) => { e.stopPropagation(); store.deleteShop(x.id); } }, "✕") : null);
+      h("div", { class: "stxt" }, x.text, who ? h("span", { class: "swho" }, who) : null, x.extra ? h("span", { class: "swho" }, "· extra") : null),
+      h("button", { class: "more", title: "Move or delete", onclick: (e) => { e.stopPropagation(); S._shopEdit = S._shopEdit === x.id ? null : x.id; refreshShopSheet(); } }, "⋯"));
     row.addEventListener("click", (e) => { if (e.target.closest("button,input,select")) return; shopToggle(x); });
-    return row;
+    if (S._shopEdit !== x.id) return row;
+    const canDel = x.by === S.me || S.me === "Mama" || S.me === "Tata" || isBoard();
+    const ed = h("div", { class: "shopedit" }, bought ? null : SHOP_LISTS.filter(([k]) => k !== listOf(x)).map(([k, l]) => h("button", { class: "btn quiet sm", onclick: () => { S._shopEdit = null; setList(x, k); } }, "→ " + l)),
+      canDel ? h("button", { class: "btn quiet sm", style: "color:var(--red);border-color:var(--red)", onclick: () => { S._shopEdit = null; store.deleteShop(x.id); } }, "✕ Delete") : null);
+    return h("div", {}, row, ed);
   }
-
   function shopList() {
     const v = shopVisible(); if (!v.length) return h("p", { class: "note" }, "Nothing on the list yet.");
-    const grp = (t, xs) => xs.length ? h("div", {}, h("div", { class: "label", style: "margin-top:10px" }, t), h("div", { class: "list" }, xs.map(shopRow))) : null;
+    const grp = (t, xs) => xs.length ? h("div", { class: "shopsec" }, h("div", { class: "label" }, h("span", {}, t), h("span", {}, String(xs.length))), h("div", { class: "list" }, xs.map(shopRow))) : null;
     const runs = {}; for (const x of v) if (x.status === "bought" && x.boughtBy) (runs[x.boughtBy] = runs[x.boughtBy] || []).push(x);
     const w = v.filter(x => !(x.status === "bought" && x.boughtBy));
     const runBlock = (p, xs) => { const total = xs.reduce((t, y) => t + (y.amount || 0), 0), has = xs.some(y => y.amount != null), hold = xs.find(y => y.amount != null) || xs[0];
-      return h("div", {}, h("div", { class: "label", style: "margin-top:10px" }, "✓ " + (R.people[p] || { label: p }).label + "'s run today"), h("div", { class: "list" }, xs.map(shopRow),
+      return h("div", { class: "shopsec" }, h("div", { class: "label" }, "✓ Bought today · " + (R.people[p] || { label: p }).label), h("div", { class: "list" }, xs.map(shopRow),
         h("div", { class: "li" }, h("div", {}, h("div", { class: "n" }, has ? "Run total: $" + total.toFixed(2) : "Run total"), has ? h("div", { class: "s" }, xs.length + " item" + (xs.length > 1 ? "s" : "")) : amtBox(hold)),
           has ? h("button", { class: "btn quiet sm", onclick: () => { for (const y of xs) if (y.amount != null) store.writeShop(Object.assign({}, y, { amount: null })); } }, "Change") : null))); };
     const by = (k) => w.filter(x => listOf(x) === k);
-    return h("div", {}, grp("🔴 Urgent", by("urgent")), ...Object.keys(runs).map(p => runBlock(p, runs[p])), grp("Costco", by("costco")), grp("Lufa", by("lufa")), grp("Meal ideas for next week", by("meal")));
+    return h("div", {}, grp("🔴 Urgent", by("urgent")), grp("Costco", by("costco")), grp("Lufa", by("lufa")), grp("Meal ideas for next week", by("meal")), ...Object.keys(runs).map(p => runBlock(p, runs[p])));
   }
   function refreshShopSheet() { if (!shopOpen) return; const box = document.getElementById("shoplist"); if (box) { box.innerHTML = ""; box.appendChild(shopList()); } }
   function shopSheet() {
@@ -1079,11 +1093,18 @@
     const add = async (by) => { const text = inp.value.trim(); if (!text) return; const now = new Date().toISOString(); await store.writeShop(Object.assign({ id: "shop_" + Date.now(), text, by, at: now, date: S.today, status: "open", urgent: !flags.costco && !flags.lufa && !flags.meal, costco: flags.costco, lufa: flags.lufa, meal: flags.meal && !flags.bought }, flags.bought ? { status: "bought", extra: true, boughtAt: now, boughtDate: S.today, boughtBy: by } : {}));
       if (flags.meal) { const W = V(); const m = W && W.assignments.find(a => a.chore === "menu" && a.person === by && !S.done[a.id]); if (m) await finish(m); }
       inp.value = ""; for (const k in flags) { flags[k] = false; if (togs[k]) togs[k].className = "btn quiet sm"; } inp.focus(); };
-    inp.addEventListener("keydown", (e) => { if (e.key === "Enter" && !isBoard()) add(S.me); });
-    shopOpen = true;
-    sheet(h("h3", {}, "🛒 Shopping list"), h("p", { class: "note" }, "Add what you need. It goes to 🔴 Urgent unless you pick Costco, Lufa or Meal idea. A meal idea for next week also ticks your Menu idea. Bought something extra for the home? Turn on Extra I bought."), inp,
-      h("div", { style: "display:flex;gap:6px;flex-wrap:wrap" }, tog("costco", "Costco"), tog("lufa", "Lufa"), tog("meal", "Meal idea"), tog("bought", "Extra I bought")),
-      isBoard() ? h("div", {}, h("p", { class: "note" }, "From:"), h("div", { class: "pick" }, R.order.map(p => h("button", { onclick: () => add(p) }, R.people[p].label)))) : h("button", { class: "btn", onclick: () => add(S.me) }, "Add"),
+    inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
+    shopOpen = true; S._shopEdit = null;
+    // one Add row + list chips (Urgent is the default); Board asks who after Add (Mama, 8 Nov 02:04)
+    const cats = [["urgent", "🔴 Urgent"], ["costco", "Costco"], ["lufa", "Lufa"], ["meal", "Meal idea"], ["bought", "Extra I bought"]];
+    const cb = {}; const paint = () => { for (const [k] of cats) cb[k].className = "btn quiet sm" + ((k === "urgent" ? !flags.costco && !flags.lufa && !flags.meal : flags[k]) ? " on" : ""); };
+    for (const [k, l] of cats) cb[k] = h("button", { class: "btn quiet sm", onclick: () => { if (k === "bought") flags.bought = !flags.bought; else for (const o of LISTK) flags[o] = o === k && !flags[o]; paint(); } }, l);
+    paint();
+    const go = () => { if (!inp.value.trim()) { inp.focus(); return; } if (isBoard()) asWho(R.order, "Who needs it?", (p) => { add(p).then(shopSheet); }); else add(S.me).then(paint); };
+    inp.setAttribute("enterkeyhint", "done");
+    sheet(h("h3", {}, "🛒 Shopping list"),
+      h("div", { class: "shopadd" }, inp, h("button", { class: "btn", onclick: go }, "Add")),
+      h("div", { class: "shopcats" }, cats.map(([k]) => cb[k])),
       h("div", { id: "shoplist" }, shopList()));
     setTimeout(() => inp.focus(), 50);
   }
