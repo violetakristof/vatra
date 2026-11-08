@@ -16,11 +16,25 @@
   button { font: inherit; cursor: pointer; color: inherit; }
   .pick button, .chip { color: var(--ink); }
   .app { min-height:100vh; display:flex; flex-direction:column; }
-  .top { padding:10px 20px 10px; display:grid; grid-template-columns:1fr auto; grid-template-areas:"brand tabs" "btns chips"; align-items:center; row-gap:10px; column-gap:16px; border-bottom:1px solid var(--line); }
-  .brand { grid-area:brand; display:flex; align-items:baseline; gap:12px; min-width:0; white-space:nowrap; }
-  .top .tabs { grid-area:tabs; justify-self:end; }
-  .topbtns { grid-area:btns; display:flex; gap:6px; flex-wrap:nowrap; align-items:center; }
-  .top .chips { grid-area:chips; justify-self:end; }
+  .top { padding:12px 20px 12px; display:flex; flex-direction:column; gap:10px; border-bottom:1px solid var(--line); }
+  .toprow { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .brand { display:flex; align-items:baseline; gap:12px; min-width:0; white-space:nowrap; overflow:hidden; }
+  .brand span { overflow:hidden; text-overflow:ellipsis; }
+  .topbtns { display:flex; gap:6px; align-items:center; flex:0 0 auto; }
+  .ibtn { width:40px; height:40px; border-radius:12px; border:1.5px solid var(--line); background:var(--card); font-size:18px; display:inline-flex; align-items:center; justify-content:center; padding:0; color:var(--ink); }
+  .ibtn.shopurg { border-color:var(--red); color:var(--red); width:auto; padding:0 10px; font-weight:700; font-size:15px; }
+  .tabs.seg { display:grid; grid-template-columns:repeat(var(--n), 1fr); width:100%; }
+  .tabs.seg button { text-align:center; white-space:nowrap; }
+  .people { display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; }
+  .person { display:flex; flex-direction:column; align-items:flex-start; gap:2px; padding:8px 12px; border-radius:14px; background:var(--card); border:1.5px solid var(--line); min-height:52px; text-align:left; color:var(--ink); min-width:0; }
+  .person .pn { display:flex; align-items:center; gap:7px; font-weight:700; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+  .person .pn i { width:10px; height:10px; border-radius:50%; background:var(--soft2); display:inline-block; flex:0 0 auto; }
+  .person .ps { font-size:12px; color:var(--mute); padding-left:17px; }
+  .person.on .pn i { background:var(--green); }
+  .person.me { border-color:var(--ink); }
+  .person.hit { background:#FCE4EC; border-color:#F48FB1; }
+  .person.off { opacity:.55; }
+  .dshort { display:none; }
   .chip .fire { font-weight:600; color:var(--mute); font-size:13px; }
   .chip.hit { background:#F8BBD0; border-color:#F8BBD0; color:#5A1030; }
   .zoombtn { align-self:center; min-height:36px; padding:0 12px; border-radius:999px; border:1.5px solid var(--ink); background:var(--card); color:var(--ink); font-weight:700; font-size:15px; white-space:nowrap; touch-action:manipulation; }
@@ -115,11 +129,15 @@
   .who { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:28px; max-width:520px; width:100%; display:flex; flex-direction:column; gap:14px; }
   .who h2 { margin:0; }
   @media (max-width: 760px) {
-    .top { padding:10px 14px; grid-template-columns:1fr; grid-template-areas:"brand" "btns" "tabs" "chips"; row-gap:8px; }
-    .top .tabs { justify-self:stretch; }
-    .top .chips { justify-self:stretch; justify-content:flex-start; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
-    .brand { white-space:normal; }
-    .top .chip { flex:0 0 auto; }
+    .top { padding:10px 12px; gap:8px; }
+    .brand b { font-size:20px; } .brand span { font-size:13px; }
+    .dlong { display:none; } .dshort { display:inline !important; }
+    .people { gap:5px; }
+    .person { padding:6px 4px; min-height:46px; border-radius:12px; align-items:center; text-align:center; }
+    .person .pn { font-size:13px; }
+    .person .pn i { display:none; }
+    .person .ps { padding-left:0; font-size:11px; }
+    .person.on { border-color:var(--green); }
     .main { padding:14px; }
     .row { flex-direction:column; gap:10px; }
     .arrow { display:none; }
@@ -250,9 +268,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794119207"></script>
-<script src="./engine.js?v=1794119207"></script>
-<script>window.VATRA_BUILD="1794119207";</script>
+<script src="./rules.js?v=1794119427"></script>
+<script src="./engine.js?v=1794119427"></script>
+<script>window.VATRA_BUILD="1794119427";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1409,18 +1427,29 @@
   }
 
   function topbar() {
-    const chips = h("div", { class: "chips" }, R.order.map(p => {
+    // designed top (Mama, 8 Nov 01:28 "think like a designer"): three aligned rows that never wrap unevenly
+    // row 1: brand + date | person + actions · row 2: tabs, equal widths · row 3: five equal name tiles
+    const people = h("div", { class: "people" }, R.order.map(p => {
       const a = V() && V().assignments.find(x => x.kind === "arrival" && x.person === p && x.date === S.today);
       const on = a && S.done[a.id];
       const aw = (S.away[p] || []).includes(S.today);
       const n = S.week ? streakOf(p) : 0, r = S.week ? nightOf(p, S.today) : null, hit = r === "hit" || (r === null && S.week && freeNight(p, S.today));
-      const c = h("button", { class: "chip" + (on ? " on" : "") + (aw ? " off" : "") + (p === S.me ? " me" : "") + (hit ? " hit" : ""), onclick: () => arrival(p), title: "Tap when home · hold for today's jobs" }, h("i"), R.people[p].label + (aw ? " · away" : ""), n ? h("span", { class: "fire" }, "🔥" + n) : null, hit ? h("span", {}, "✨") : null);
+      const c = h("button", { class: "person" + (on ? " on" : "") + (aw ? " off" : "") + (p === S.me ? " me" : "") + (hit ? " hit" : ""), onclick: () => arrival(p), title: "Tap when home · hold for today's jobs" },
+        h("span", { class: "pn" }, h("i"), R.people[p].label),
+        h("span", { class: "ps" }, aw ? "away" : [on ? "home" : "", n ? "🔥" + n : "", hit ? "✨" : ""].filter(Boolean).join(" · ") || "\u00a0"));
       longPress(c, () => daySheet(p)); return c;
     }));
-    const tabList = isBoard() ? [["tonight", "Tonight"], ["week", "This week"], ["sunday", "Weekly review"]] : [["mine", "Mine"], ["tonight", "Tonight"], ["week", "This week"], ["sunday", "Weekly review"]];
-    const tabs = h("div", { class: "tabs" }, tabList.map(([k, l]) => h("button", { class: S.tab === k ? "on" : "", onclick: () => { S.tab = k; render(); } }, l)));
-    const chipBlock = chips;
-    return h("div", { class: "top" }, h("div", { class: "brand" }, h("b", {}, "Vatra"), h("span", {}, fmtDay(S.today) + " · " + nowHM())), h("div", { class: "topbtns" }, S.me ? (() => { const sw = () => { localStorage.removeItem("vatra.me"); S.me = null; render(); }; const b = h("button", { class: "mepill", title: isBoard() ? "Hold to change this device" : "Switch person", onclick: isBoard() ? null : sw }, "👤 " + ((R.people[S.me] || {}).label || S.me) + (isBoard() ? "" : " · switch")); if (isBoard()) longPress(b, sw); return b; })() : null, h("button", { class: "btn quiet sm", style: "align-self:center", onclick: askSheet }, "🙋 Ask"), (() => { const u = shopOpenItems().filter(x => isUrg(x)).length; return h("button", { class: "btn quiet sm" + (u ? " shopurg" : ""), style: "align-self:center", onclick: shopSheet }, u ? "🛒 Shop " + u + "!" : "🛒 Shop"); })(), h("button", { class: "btn quiet sm", style: "align-self:center", title: "More", onclick: moreSheet }, "⋯")), chipBlock, tabs);
+    const tabList = isBoard() ? [["tonight", "Tonight"], ["week", "This week"], ["sunday", "Review"]] : [["mine", "Mine"], ["tonight", "Tonight"], ["week", "This week"], ["sunday", "Review"]];
+    const tabs = h("div", { class: "tabs seg", style: "--n:" + tabList.length }, tabList.map(([k, l]) => h("button", { class: S.tab === k ? "on" : "", onclick: () => { S.tab = k; render(); } }, l)));
+    const me = S.me ? (() => { const sw = () => { localStorage.removeItem("vatra.me"); S.me = null; render(); }; const b = h("button", { class: "mepill", title: isBoard() ? "Hold to change this device" : "Switch person", onclick: isBoard() ? null : sw }, (R.people[S.me] || {}).label || "Kitchen board"); if (isBoard()) longPress(b, sw); return b; })() : null;
+    const u = shopOpenItems().filter(x => isUrg(x)).length;
+    const acts = h("div", { class: "topbtns" }, me,
+      h("button", { class: "ibtn", title: "Ask", onclick: askSheet }, "🙋"),
+      h("button", { class: "ibtn" + (u ? " shopurg" : ""), title: "Shopping list", onclick: shopSheet }, u ? "🛒" + u : "🛒"),
+      h("button", { class: "ibtn", title: "More", onclick: moreSheet }, "⋯"));
+    return h("div", { class: "top" },
+      h("div", { class: "toprow" }, h("div", { class: "brand" }, h("b", {}, "Vatra"), h("span", { class: "dlong" }, fmtDay(S.today).replace(/, \d{4}$/, "") + " · " + nowHM()), h("span", { class: "dshort" }, new Date(S.today + "T12:00").toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" }))), acts),
+      tabs, people);
   }
 
   // ⋯ in the top bar: text size, rewards, ideas (Mama, 7 Nov 21:15: fewer top buttons)
