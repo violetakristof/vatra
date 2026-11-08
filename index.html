@@ -132,7 +132,7 @@
   @media (max-width: 760px) {
     .top { padding:10px 12px; gap:8px; }
     .brand b { font-size:20px; } .brand span { font-size:13px; }
-    .dlong, .dshort, .swl { display:none !important; }
+    .dlong, .dshort { display:none !important; }
     .people { gap:5px; }
     .person { padding:6px 4px; min-height:46px; border-radius:12px; align-items:center; text-align:center; }
     .person .pn { font-size:13px; }
@@ -288,9 +288,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794119683"></script>
-<script src="./engine.js?v=1794119683"></script>
-<script>window.VATRA_BUILD="1794119683";</script>
+<script src="./rules.js?v=1794119972"></script>
+<script src="./engine.js?v=1794119972"></script>
+<script>window.VATRA_BUILD="1794119972";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -923,11 +923,15 @@
     for (const t of mine) { const at = doneAtMs(t.id), cv = S.done[t.id] && S.done[t.id].covered && S.done[t.id].person !== p; if (!at) { allDone = false; allOnTime = false; } else if (cv || at >= cutoffMs(d, t.cut)) allOnTime = false; } // 🛟 covered by someone else = no pink (Mama, 6 Nov 22:07)
     return allOnTime ? "hit" : allDone ? "late" : "open";
   }
+  // 🔥 = nights done before 10 pm this week, Sunday to Saturday, out of 7; restarts every Sunday (Mama, 8 Nov 01:38). First week Tue 3 to Sat 7 Nov = out of 5
+  const FIRE_START = "2026-11-03";
+  function fireWeek() { const t = new Date(S.today + "T12:00:00"), sun = E.addDays(S.today, -t.getDay()); const from = sun < FIRE_START ? FIRE_START : sun; const sat = E.addDays(sun, 6); let n = 0; for (let d = from; d <= sat; d = E.addDays(d, 1)) n++; return { from, sat, of: n }; }
   function streakOf(p) {
-    let n = 0; const today = nightOf(p, S.today); if (today === "hit") n++;
-    for (let i = 1; i <= 14; i++) { const d = E.addDays(S.today, -i); if ((R.startDate && d < R.startDate) || d < BEFORE10_START) break; const r = nightOf(p, d); if (r === null) continue; if (r === "hit") n++; else break; }
+    const w = fireWeek(); let n = 0;
+    for (let d = w.from; d <= S.today; d = E.addDays(d, 1)) { const r = nightOf(p, d); if (r === "hit" || (r === null && freeNight(p, d))) n++; }
     return n;
   }
+  const fireTxt = (p) => "🔥" + streakOf(p) + "/" + fireWeek().of;
   function weekScore(p, week) {
     let hit = 0, n = 0; for (let i = 0; i < 7; i++) { const d = E.addDays(week, i); if (d > S.today || (R.startDate && d < R.startDate) || d < BEFORE10_START) continue; const r = nightOf(p, d); if (r === null) continue; if (d === S.today && r === "open") continue; n++; if (r === "hit") hit++; }
     return { hit, n };
@@ -950,7 +954,7 @@
   function nineBanner() {
     const hr = new Date().getHours(); if (E.ymd(new Date()) !== S.today || hr !== ON_TIME_BY - 1) return null;
     const open = nightTiles(S.today).filter(t => !doneAtMs(t.id)); if (!open.length) return null;
-    return h("div", { class: "ninebar" }, h("b", {}, "1 hour left · still open: "), open.map(t => (R.people[t.p] || { label: t.p }).label + " · " + t.a.label).join(", "), h("div", { style: "font-size:12px;opacity:.9;margin-top:2px" }, "Done before 10 pm keeps the 🔥 streak going."));
+    return h("div", { class: "ninebar" }, h("b", {}, "1 hour left · still open: "), open.map(t => (R.people[t.p] || { label: t.p }).label + " · " + t.a.label).join(", "), h("div", { style: "font-size:12px;opacity:.9;margin-top:2px" }, "Done before 10 pm adds a 🔥 for this week."));
   }
   // tap a name in the streak row: that person's jobs today, done (with time) and not done (Mama, 7 Nov 20:56)
   function dayItems(p, d) {
@@ -982,7 +986,7 @@
         isMgr() && x.st === "open" ? h("span", { style: "display:inline-flex;gap:4px" }, h("button", { class: "btn quiet sm", title: "Someone covered it", onclick: () => pickWho(R.order.filter(q => q !== p), "Who covered " + R.people[p].label + "'s " + x.label + "?", async (q) => { await coverTile(x.a, q); daySheet(p); }) }, "🛟"), h("button", { class: "btn quiet sm xbtn", title: "Cancel for today", onclick: async () => { await skipTile(x.a); daySheet(p); } }, "✕"))
           : isMgr() && x.st === "cancelled" ? h("button", { class: "btn quiet sm", onclick: async () => { await unskipTile(x.a); daySheet(p); } }, "Restore") : null))) : h("p", { class: "note" }, "Nothing due today."));
   }
-  function streakRow() { return h("div", { class: "streaks" }, R.order.map(p => { const n = streakOf(p), r = nightOf(p, S.today), ok = r === "hit" || (r === null && freeNight(p, S.today)); return h("span", { class: "chip" + (ok ? " hit" : ""), style: "cursor:pointer", onclick: () => daySheet(p) }, R.people[p].label + " " + (n ? "🔥" + n : "·") + (ok ? " ✨" : "")); })); }
+  function streakRow() { return h("div", { class: "streaks" }, R.order.map(p => { const n = streakOf(p), r = nightOf(p, S.today), ok = r === "hit" || (r === null && freeNight(p, S.today)); return h("span", { class: "chip" + (ok ? " hit" : ""), style: "cursor:pointer", onclick: () => daySheet(p) }, R.people[p].label + " " + fireTxt(p)); })); }
   function rewardPicker(week) {
     const rw = (S.settings && S.settings.rewards) || {}; const cur = rw[week];
     const scores = R.order.map(p => [p, weekScore(p, week)]).filter(x => x[1].n > 0);
@@ -1456,7 +1460,7 @@
       const n = S.week ? streakOf(p) : 0, r = S.week ? nightOf(p, S.today) : null, hit = r === "hit" || (r === null && S.week && freeNight(p, S.today));
       const c = h("button", { class: "person" + (on ? " on" : "") + (aw ? " off" : "") + (p === S.me ? " me" : "") + (hit ? " hit" : ""), onclick: () => arrival(p), title: "Tap when home · hold for today's jobs" },
         h("span", { class: "pn" }, h("i"), R.people[p].label),
-        h("span", { class: "ps" }, aw ? "away" : [on ? "home" : "", n ? "🔥" + n : "", hit ? "✨" : ""].filter(Boolean).join(" · ") || "\u00a0"));
+        h("span", { class: "ps" }, aw ? "away" : [on ? "home" : "", S.week ? fireTxt(p) : ""].filter(Boolean).join(" · ") || "\u00a0"));
       longPress(c, () => daySheet(p)); return c;
     }));
     const tabList = isBoard() ? [["tonight", "Tonight"], ["week", "This week"], ["sunday", "Review"]] : [["mine", "Mine"], ["tonight", "Tonight"], ["week", "This week"], ["sunday", "Review"]];
@@ -1700,7 +1704,7 @@
     if (isBoard()) return boardView(main);
     { const hn = houseNight(S.today); if (hn.hit) { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "House done before 10 🎉", h("div", { style: "font-size:13px;font-weight:500" }, "Everyone finished on time tonight."))); confetti("house:" + S.today); }
       const nb = nineBanner(); if (nb) main.appendChild(nb);
-      main.appendChild(h("div", {}, h("div", { class: "label" }, "Before 10 pm · 🔥 streaks"), streakRow())); }
+      main.appendChild(h("div", {}, h("div", { class: "label" }, "Before 10 pm · 🔥 this week"), streakRow())); }
     const W = V(), d = S.today;
     const ev = (role) => W.assignments.find(a => a.kind === "evening" && a.role === role && a.date === d);
     const sec = (label, node) => { const s = h("div", {}); s.appendChild(h("div", { class: "label" }, label)); s.appendChild(node); return s; };
@@ -1778,10 +1782,10 @@
 
   function mine(main) {
     { const r = nightOf(S.me, S.today); const n = streakOf(S.me);
-      if (r === "hit") { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "All done tonight ✨", h("div", { style: "font-size:13px;font-weight:500" }, (nightTiles(S.today).some(t => t.p === S.me && t.a.chore === "cook") && chefCut(S.me, S.today) === CHEF_BY ? "Chef before 8 pm" : "Before 10 pm") + " · 🔥 " + n + " night" + (n === 1 ? "" : "s") + " in a row"))); confetti("me:" + S.me + ":" + S.today); }
-      else if (r === null && freeNight(S.me, S.today)) { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "All done tonight ✨", h("div", { style: "font-size:13px;font-weight:500" }, "Nothing due tonight" + (n ? " · 🔥 " + n + " night" + (n === 1 ? "" : "s") + " in a row" : "")))); confetti("me:" + S.me + ":" + S.today); }
-      else if (r === "late") main.appendChild(h("div", { class: "note", style: "margin-bottom:8px" }, "Done ✓ · but late, so the 🔥 streak restarts tomorrow."));
-      else if (r === "open") main.appendChild(h("div", { class: "note", style: "margin-bottom:8px" }, "🔥 " + n + " · " + (nightTiles(S.today).some(t => t.p === S.me && t.a.chore === "cook") && chefCut(S.me, S.today) === CHEF_BY ? (S.me === "Tata" ? "Chef done by 8 pm" : "Chef done by 8 pm, the rest before 10 pm,") : "finish everything before 10 pm") + " to keep it going.")); }
+      if (r === "hit") { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "All done tonight ✨", h("div", { style: "font-size:13px;font-weight:500" }, (nightTiles(S.today).some(t => t.p === S.me && t.a.chore === "cook") && chefCut(S.me, S.today) === CHEF_BY ? "Chef before 8 pm" : "Before 10 pm") + " · " + fireTxt(S.me) + " this week"))); confetti("me:" + S.me + ":" + S.today); }
+      else if (r === null && freeNight(S.me, S.today)) { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "All done tonight ✨", h("div", { style: "font-size:13px;font-weight:500" }, "Nothing due tonight · " + fireTxt(S.me) + " this week"))); confetti("me:" + S.me + ":" + S.today); }
+      else if (r === "late") main.appendChild(h("div", { class: "note", style: "margin-bottom:8px" }, "Done ✓ · but late, so tonight doesn't count for " + fireTxt(S.me) + "."));
+      else if (r === "open") main.appendChild(h("div", { class: "note", style: "margin-bottom:8px" }, fireTxt(S.me) + " this week · " + (nightTiles(S.today).some(t => t.p === S.me && t.a.chore === "cook") && chefCut(S.me, S.today) === CHEF_BY ? (S.me === "Tata" ? "Chef done by 8 pm" : "Chef done by 8 pm, the rest before 10 pm,") : "finish everything before 10 pm") + " to add tonight.")); }
     { const wc = wishCards(); if (wc) main.appendChild(wc); }
     { const kc = kindCards(); if (kc) main.appendChild(kc); }
     { const mc = messCards(); if (mc) main.appendChild(mc); }
