@@ -250,9 +250,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794118843"></script>
-<script src="./engine.js?v=1794118843"></script>
-<script>window.VATRA_BUILD="1794118843";</script>
+<script src="./rules.js?v=1794119054"></script>
+<script src="./engine.js?v=1794119054"></script>
+<script>window.VATRA_BUILD="1794119054";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -942,8 +942,7 @@
           h("div", { class: "s" }, x.st === "done" ? (x.cover ? "🛟 covered by " + ((R.people[x.cover] || {}).label || x.cover) + " · " : "") + (x.at ? hm(x.at) : "done") + (x.late ? " · late" : "") : x.st === "cancelled" ? "cancelled" : "not done yet")),
         // Mama can cancel or restore right here (7 Nov 21:09: "why can't I cancel his Inbox to Library")
         isMgr() && x.st === "open" ? h("span", { style: "display:inline-flex;gap:4px" }, h("button", { class: "btn quiet sm", title: "Someone covered it", onclick: () => pickWho(R.order.filter(q => q !== p), "Who covered " + R.people[p].label + "'s " + x.label + "?", async (q) => { await coverTile(x.a, q); daySheet(p); }) }, "🛟"), h("button", { class: "btn quiet sm xbtn", title: "Cancel for today", onclick: async () => { await skipTile(x.a); daySheet(p); } }, "✕"))
-          : isMgr() && x.st === "cancelled" ? h("button", { class: "btn quiet sm", onclick: async () => { await unskipTile(x.a); daySheet(p); } }, "Restore") : null))) : h("p", { class: "note" }, "Nothing due today."),
-      h("div", { class: "label", style: "margin-top:12px" }, "Arrival · when you get home"), h("p", { class: "note" }, R.dod.arrival));
+          : isMgr() && x.st === "cancelled" ? h("button", { class: "btn quiet sm", onclick: async () => { await unskipTile(x.a); daySheet(p); } }, "Restore") : null))) : h("p", { class: "note" }, "Nothing due today."));
   }
   function streakRow() { return h("div", { class: "streaks" }, R.order.map(p => { const n = streakOf(p), r = nightOf(p, S.today), ok = r === "hit" || (r === null && freeNight(p, S.today)); return h("span", { class: "chip" + (ok ? " hit" : ""), style: "cursor:pointer", onclick: () => daySheet(p) }, R.people[p].label + " " + (n ? "🔥" + n : "·") + (ok ? " ✨" : "")); })); }
   function rewardPicker(week) {
@@ -1428,6 +1427,7 @@
   function moreSheet() {
     const zb = () => h("button", { class: "btn", onclick: () => { const i = ZOOMS.indexOf(zoomNow()); try { localStorage.setItem("vatra.zoom", String(ZOOMS[(i + 1) % ZOOMS.length])); } catch (e) {} render(); moreSheet(); } }, "Aa Text size · " + Math.round(zoomNow() * 100) + "%");
     sheet(h("h3", {}, "More"), h("div", { style: "display:flex;flex-direction:column;gap:8px" }, zb(), h("button", { class: "btn quiet", onclick: () => { closeSheet(); rewardSheet(); } }, "🎁 Rewards"), h("button", { class: "btn quiet", onclick: () => { closeSheet(); ideaSheet(); } }, "💡 Idea for Vatra"),
+      h("button", { class: "btn quiet", onclick: () => { closeSheet(); sheet(h("h3", {}, "Arrival · when you get home"), h("p", {}, R.dod.arrival)); } }, "🏠 Arrival steps"),
       isMgr() && S.db ? h("button", { class: "btn quiet", onclick: () => { closeSheet(); window.firebase ? importSheet() : exportSheet(); } }, window.firebase ? "📥 Import from old app" : "📤 Export for new app") : null));
   }
   // ---------- move to the new app (8 Nov): export in the artifact, import in the Firebase app ----------
