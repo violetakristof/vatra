@@ -312,9 +312,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794125713"></script>
-<script src="./engine.js?v=1794125713"></script>
-<script>window.VATRA_BUILD="1794125713";</script>
+<script src="./rules.js?v=1794125935"></script>
+<script src="./engine.js?v=1794125935"></script>
+<script>window.VATRA_BUILD="1794125935";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -2058,7 +2058,7 @@
     g.appendChild(h("div"));
     for (const p of cols) g.appendChild(h("div", { style: "padding:8px;font-weight:700;border-left:1px solid var(--soft);font-size:13px" }, R.people[p].label));
     const tileEl = (a) => { const st = state(a);
-      const bg = st === "done" ? "background:var(--greenbg);border-color:var(--green)" : st === "overdue" ? "background:var(--red);color:#fff;border-color:var(--red)" : (st === "locked" || st === "future" || ((a.date || a.due) && (a.date || a.due) > S.today && st !== "cancelled")) ? "background:var(--soft);color:#8C857B" : ""; /* any job on a later day is grey, Finisher included (Mama, 8 Nov 03:14) */
+      const bg = st === "cancelled" ? "background:transparent;color:#A39C92;text-decoration:line-through;border-style:dashed" : st === "done" ? "background:var(--greenbg);border-color:var(--green)" : st === "overdue" ? "background:var(--red);color:#fff;border-color:var(--red)" : (st === "locked" || st === "future" || ((a.date || a.due) && (a.date || a.due) > S.today && st !== "cancelled")) ? "background:var(--soft);color:#8C857B" : ""; /* any job on a later day is grey, Finisher included (Mama, 8 Nov 03:14) */
       const ov = S.done[a.id + ":override"];
       const t = h("div", { style: "border:1.5px solid var(--line);border-radius:7px;padding:3px 6px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;" + bg }, a.label.replace(" · by 5 pm", ""));
       t.style.boxShadow = "inset 4px 0 0 " + FX[freqOf(a).k][1]; longPress(t, () => sheetFor(a)); if (swapPendingOn(a.id)) t.style.outline = "2px solid var(--amber)";
