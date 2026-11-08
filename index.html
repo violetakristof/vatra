@@ -74,7 +74,6 @@
   .tile.overdue .k { color:var(--red); }
   .tile.passed, .tile.missed { background:var(--soft); }
   .li.missed { background:var(--soft); color:#8C857B; }
-  .tile.auto { background:var(--greenbg); border-color:var(--green); }
   .tile.unassigned { border-style:dashed; }
   .tile.claim { background:var(--amberbg); border-color:var(--amber); }
   .tile.claim .k, .tile.claim .s { color:var(--amberink); }
@@ -260,7 +259,7 @@
   .bstep .n, .bstep .namebtn { font-size:22px; font-weight:800; line-height:1.1; }
   .bstep .s { font-size:12px; color:var(--mute); }
   .bstep .acts { margin-top:auto; display:flex; gap:8px; padding-top:8px; flex-wrap:wrap; align-items:center; }
-  .bstep.done, .bstep.auto { background:var(--greenbg); border-color:var(--green); }
+  .bstep.done { background:var(--greenbg); border-color:var(--green); }
   .bstep.locked, .bstep.future { background:var(--soft); border-style:dashed; border-color:var(--soft2); opacity:.75; }
   .bstep.cancelled, .bstep.passed { background:var(--soft); border-color:var(--soft2); opacity:.6; }
   .bstep.cancelled .k { text-decoration:line-through; }
@@ -316,9 +315,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794126818"></script>
-<script src="./engine.js?v=1794126818"></script>
-<script>window.VATRA_BUILD="1794126818";</script>
+<script src="./rules.js?v=1794153146"></script>
+<script src="./engine.js?v=1794153146"></script>
+<script>window.VATRA_BUILD="1794153146";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1726,8 +1725,8 @@
     const claimed = a.auto && S.done[a.id + ":override"];
     const isAuto = a.auto && !claimed && !S.done[a.id] && st !== "cancelled";
     const t = h("div", { class: "tile " + (cls || "") + " " + (isAuto ? "auto" : st) + (S.running[a.id] ? " running" : "") },
-      h("div", { class: "k" }, a.label), nameEl(a, a.unassigned && !S.done[a.id + ":override"] ? (a.note || "not set") : (R.people[effPerson(a)] || {}).label || "—"), h("div", { class: "s" }, isAuto ? "fixed role" : sub(a, st)), h("div", { class: "s", style: "color:var(--ink);margin-top:2px" }, R.short[a.chore] || ""),
-      a.unassigned ? null : h("div", { class: "acts" }, isAuto ? [S.me !== a.person ? h("button", { class: "btn ghost", onclick: () => asWho(R.order.filter(p => p !== a.person), "Who's cooking tonight?", (p) => override(a, p, "claim")) }, "I'll cook") : null, cancelBtn(a, st)] : [].concat(acts(a, st), unclaimBtn(a, st) || [])));
+      h("div", { class: "k" }, a.label), nameEl(a, a.unassigned && !S.done[a.id + ":override"] ? (a.note || "not set") : (R.people[effPerson(a)] || {}).label || "—"), h("div", { class: "s" }, isAuto ? "Done by 8 pm" : sub(a, st)), h("div", { class: "s", style: "color:var(--ink);margin-top:2px" }, R.short[a.chore] || ""),
+      a.unassigned ? null : h("div", { class: "acts" }, isAuto ? [].concat(acts(a, st), S.me !== a.person ? [h("button", { class: "btn ghost", onclick: () => asWho(R.order.filter(p => p !== a.person), "Who's cooking tonight?", (p) => override(a, p, "claim")) }, "I'll cook")] : []) : [].concat(acts(a, st), unclaimBtn(a, st) || [])));
     fx(t, a); markLate(t, a);
     longPress(t, () => sheetFor(a));
     return t;
@@ -1769,8 +1768,8 @@
       const t = h("div", { class: "bstep " + (isAuto ? "auto" : st) + (isActive ? " active" : "") + (S.pomo[a.id] ? " running" : "") },
         h("div", { class: "k" }, a.label), isActive ? h("div", { class: "now" }, "Now") : null,
         nameEl(a, a.unassigned && !S.done[a.id + ":override"] ? (a.note || "not set") : (R.people[effPerson(a)] || {}).label || "—"),
-        h("div", { class: "s" }, isAuto ? "fixed role" : sub(a, st)),
-        a.unassigned ? null : h("div", { class: "acts" }, isAuto ? [S.me !== a.person ? h("button", { class: "btn ghost sm", onclick: () => asWho(R.order.filter(p => p !== a.person), "Who's cooking tonight?", (p) => override(a, p, "claim")) }, "I'll cook") : null, cancelBtn(a, st)] : [].concat(acts(a, st, isActive), unclaimBtn(a, st) || [])));
+        h("div", { class: "s" }, isAuto ? "Done by 8 pm" : sub(a, st)),
+        a.unassigned ? null : h("div", { class: "acts" }, isAuto ? [].concat(acts(a, st, isActive), S.me !== a.person ? [h("button", { class: "btn ghost sm", onclick: () => asWho(R.order.filter(p => p !== a.person), "Who's cooking tonight?", (p) => override(a, p, "claim")) }, "I'll cook")] : []) : [].concat(acts(a, st, isActive), unclaimBtn(a, st) || [])));
       fx(t, a); markLate(t, a); longPress(t, () => sheetFor(a)); return t;
     })));
     { const settled = steps.length && steps.every(a => ["done", "cancelled", "passed"].includes(state(a)) || (a.auto && S.done[a.id])); if (settled) { chain.classList.add("calm"); main.appendChild(sec("Dinner organization", h("div", {}, h("div", { class: "calmbar", style: "margin-bottom:8px" }, "✓ Dinner done for tonight"), chain))); } else main.appendChild(sec("Dinner organization", chain)); }
@@ -1780,7 +1779,7 @@
     const chips = h("div", { class: "bchips" }), doneChips = h("div", { class: "bchips" });
     const fresh = (a) => { const dd = S.done[a.id]; return !dd || !dd.at || Date.now() - new Date(dd.at) < 3600000; };
     const isWk = E.dow(d) === "Sat" || (E.dow(d) === "Sun" && W.week < FIRST_SUN);
-    const todays = W.assignments.filter(a => !["evening", "zone", "arrival", "streak"].includes(a.kind) && !a.own && a !== gb && a.chore !== "dishPrep" && (a.date === d || shopFri(a, d) || (!a.date && a.window === "wknd" && isWk) || (!a.date && a.window === "week" && a.due === d)));
+    const todays = W.assignments.filter(a => !["evening", "zone", "arrival", "streak"].includes(a.kind) && !a.own && !a.bathDay && a !== gb && a.chore !== "dishPrep" && (a.date === d || shopFri(a, d) || (!a.date && a.window === "wknd" && isWk) || (!a.date && a.window === "week" && a.due === d)));
     for (const a of todays) {
       const st = state(a); const folded = (st === "done" && !fresh(a)) || st === "cancelled";
       const un = a.unassigned && !S.done[a.id + ":override"];
