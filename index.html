@@ -302,9 +302,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794122032"></script>
-<script src="./engine.js?v=1794122032"></script>
-<script>window.VATRA_BUILD="1794122032";</script>
+<script src="./rules.js?v=1794123279"></script>
+<script src="./engine.js?v=1794123279"></script>
+<script>window.VATRA_BUILD="1794123279";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -615,7 +615,7 @@
   }
 
   // ---------- actions ----------
-  const A = (id) => (V() ? V().assignments.find(a => a.id === id) : null);
+  const A = (id) => (V() && V().assignments.find(a => a.id === id)) || (S.nextWeek && viewOf(S.nextWeek).assignments.find(a => a.id === id)) || null;
   function effPerson(a) { if (a.zoneRef) { const z = (V() && V().assignments.find(x => x.id === a.zoneRef)) || (PV() && PV().assignments.find(x => x.id === a.zoneRef)); if (z) return effPerson(z); } const o = S.done[a.id + ":override"]; return o ? o.person : a.person; }
   async function start(a) { S.running[a.id] = Date.now(); localStorage.setItem("vatra.running", JSON.stringify(S.running)); render(); }
   async function finish(a) {
@@ -724,10 +724,27 @@
 
   // ---------- swaps ----------
   const swapOpen = (a) => !a.carried && !a.bathDay && !a.ask && !a.own && !a.auto && a.kind !== "arrival" && a.kind !== "streak" && a.chore !== "putaway" && !a.unassigned && state(a) !== "done";
-  function swapsAll() { return Object.values(S.done).filter(d => d && d.swap && d.week === (S.week && S.week.week)); }
+  function swapsAll() { const wk = [S.week && S.week.week, S.nextWeek && S.nextWeek.week]; return Object.values(S.done).filter(d => d && d.swap && !d.deleted && wk.includes(d.week)); }
+  const swapPendingOn = (id) => swapsAll().some(sw => sw.status === "pending" && (sw.give.includes(id) || sw.take.includes(id)));
+  // ask to take someone else's job, optionally giving one or two of mine back; the owner or Mama approves (Mama, 8 Nov 02:31)
+  function takeSheet(a) {
+    const owner = effPerson(a), me = S.me, W = viewOf(S.week && a.week === S.week.week ? S.week : S.nextWeek);
+    let picked = [];
+    const draw = () => {
+      const mine = W.assignments.filter(x => effPerson(x) === me && swapOpen(x) && (!x.date || x.date >= S.today) && E.qualifies(R, owner, x));
+      const give = picked.map(id => W.assignments.find(x => x.id === id)).filter(Boolean);
+      sheet(h("h3", {}, "Swap · " + a.label), h("p", { class: "note" }, R.people[owner].label + " · " + (a.date ? fmtDay(a.date) : a.window === "wknd" ? "weekend" : "this week") + " · ~" + a.minutes + " min. Take it as a favour, or give one of yours back."),
+        h("div", { class: "list" }, mine.length ? mine.map(x => h("button", { class: "li", style: "cursor:pointer;text-align:left;" + (picked.includes(x.id) ? "border-color:var(--ink);background:var(--soft)" : ""), onclick: () => { picked = picked.includes(x.id) ? picked.filter(i => i !== x.id) : picked.concat([x.id]).slice(-2); draw(); } },
+          h("div", {}, h("div", { class: "n" }, (picked.includes(x.id) ? "✓ " : "") + x.label), h("div", { class: "s" }, (x.date ? fmtDay(x.date) : (x.window === "wknd" ? "weekend" : "this week")) + " · ~" + x.minutes + " min")))) : h("p", { class: "note" }, "You have nothing open to give back.")),
+        h("button", { class: "btn", onclick: async () => { await proposeSwap(me, owner, give.map(x => x.id), [a.id], a.week); closeSheet(); } }, give.length ? "Ask " + R.people[owner].label + ": swap" : "Ask " + R.people[owner].label + ": I take it"),
+        h("p", { class: "note" }, R.people[owner].label + " or Mama says yes or no."));
+    };
+    if (!R.pool.includes(me) || !E.qualifies(R, me, a)) { sheet(h("h3", {}, a.label), h("p", {}, "This job can't move to you.")); return; }
+    draw();
+  }
   function swapSheet(a) {
     const me = effPerson(a);
-    const W = V();
+    const W = S.nextWeek && a.week === S.nextWeek.week ? viewOf(S.nextWeek) : V();
     const people = R.pool.filter(p => p !== me && E.qualifies(R, p, a));
     let target = null, picked = [];
     const draw = () => {
@@ -740,15 +757,15 @@
         const take = picked.map(id => W.assignments.find(x => x.id === id));
         const err = take.length ? E.swapValid(R, [a], take) : "pick one or two jobs";
         kids.push(h("p", { class: "note", style: err ? "color:var(--red)" : "color:var(--green)" }, err ? err : "Fair swap: " + a.minutes + " min for " + take.reduce((t, x) => t + x.minutes, 0) + " min"));
-        kids.push(h("button", { class: "btn", disabled: err ? "disabled" : null, style: err ? "opacity:.4" : "", onclick: async () => { if (err) return; await proposeSwap(me, target, [a.id], picked); closeSheet(); } }, "Ask " + R.people[target].label));
+        kids.push(h("button", { class: "btn", disabled: err ? "disabled" : null, style: err ? "opacity:.4" : "", onclick: async () => { if (err) return; await proposeSwap(me, target, [a.id], picked, a.week); closeSheet(); } }, "Ask " + R.people[target].label));
       }
       sheet(...kids);
     };
     draw();
   }
-  async function proposeSwap(from, to, give, take) {
+  async function proposeSwap(from, to, give, take, week) {
     const id = "swap:" + Date.now();
-    await store.writeDone(id, { id, swap: true, from, to, give, take, status: "pending", week: S.week.week, date: S.today, minutes: 0, counts: false });
+    await store.writeDone(id, { id, swap: true, from, to, give, take, status: "pending", week: week || S.week.week, date: S.today, minutes: 0, counts: false });
   }
   async function answerSwap(sw, yes) {
     if (yes) {
@@ -763,9 +780,9 @@
     if (!pend.length) return null;
     return h("div", { class: "list" }, pend.map(sw => {
       const g = sw.give.map(i => (A(i) || {}).label).join(" + "), t = sw.take.map(i => (A(i) || {}).label).join(" + ");
-      const canAnswer = sw.to === S.me || isBoard();
+      const canAnswer = sw.to === S.me || isBoard() || isMgr(); // the other person or Mama approves
       return h("div", { class: "li", style: "border-color:var(--amber);background:var(--amberbg)" },
-        h("div", {}, h("div", { class: "n" }, R.people[sw.from].label + " asks " + R.people[sw.to].label + " to swap"), h("div", { class: "s", style: "color:var(--ink)" }, R.people[sw.from].label + " gives " + g + " · takes " + t)),
+        h("div", {}, h("div", { class: "n" }, R.people[sw.from].label + " asks " + R.people[sw.to].label + (g ? " to swap" : " to take a job")), h("div", { class: "s", style: "color:var(--ink)" }, R.people[sw.from].label + (g ? " gives " + g + " · takes " : " takes ") + t)),
         h("div", { style: "display:flex;gap:6px" },
           canAnswer ? h("button", { class: "btn sm", onclick: () => answerSwap(sw, true) }, "Yes") : null,
           canAnswer ? h("button", { class: "btn quiet sm", onclick: () => answerSwap(sw, false) }, "No") : null,
@@ -791,6 +808,9 @@
     const kids = [h("h3", {}, a.label), h("p", { class: "note" }, a.date ? fmtDay(a.date) : (a.window === "wknd" ? (a.dueSun ? "Sat or Sun" : "Saturday") : "This week")),
       h("div", { class: "pick big" }, R.order.map(p => { const busy = busyOn(p, a); return h("button", { class: p === cur ? "on" : "", onclick: async () => { if (p !== cur) await override(a, p); closeSheet(); } }, h("div", {}, R.people[p].label), busy ? h("div", { style: "font-size:11px;font-weight:500;opacity:.75" }, busy) : null); }))];
     if (S.done[a.id + ":override"]) kids.push(h("button", { class: "btn quiet sm", onclick: async () => { await store.deleteDone(a.id + ":override"); closeSheet(); } }, "Back to " + R.people[a.person].label));
+    if (state(a) === "cancelled") kids.push(h("button", { class: "btn quiet", onclick: async () => { await unskipTile(a); closeSheet(); } }, "Restore"));
+    else if (state(a) !== "done") kids.push(h("button", { class: "btn quiet", style: "border-color:var(--red);color:var(--red)", onclick: async () => { await skipTile(a); closeSheet(); } }, a.kind === "zone" ? "✕ Cancel for today" : "✕ Cancel this job"));
+    kids.push(h("button", { class: "btn quiet sm", onclick: () => { closeSheet(); sheetFor(a); } }, "More…"));
     sheet(...kids);
   }
   // Clear a person's day: move every open shared tile of theirs on a date to whoever has the lightest load (or a chosen person)
@@ -1998,28 +2018,39 @@
   }
 
   function weekView(main) {
-    const W = V();
+    // Mama's weekly board (8 Nov 02:29): This week / Next week, zones + Chef included, tap any job to reassign, planned minutes per person
+    const hasNext = !!S.nextWeek; if (!hasNext) S._wkSel = "this";
+    const W = S._wkSel === "next" && hasNext ? viewOf(S.nextWeek) : V();
+    if (hasNext) main.appendChild(h("div", { class: "tabs seg", style: "--n:2;margin-bottom:8px" }, [["this", "This week · " + fmtDay(V().week)], ["next", "Next week · " + fmtDay(S.nextWeek.week)]].map(([k, l]) => h("button", { class: (S._wkSel || "this") === k ? "on" : "", onclick: () => { S._wkSel = k; render(); } }, l))));
+    { const sc = swapCards(); if (sc) main.appendChild(h("div", { style: "margin-bottom:8px" }, h("div", { class: "label" }, "Swap requests"), sc)); }
     const cols = R.order;
     const g = h("div", { style: "display:grid;grid-template-columns:56px repeat(" + cols.length + ", minmax(0,1fr));gap:0;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;font-size:12px" });
     g.appendChild(h("div"));
     for (const p of cols) g.appendChild(h("div", { style: "padding:8px;font-weight:700;border-left:1px solid var(--soft);font-size:13px" }, R.people[p].label));
+    const tileEl = (a) => { const st = state(a);
+      const bg = st === "done" ? "background:var(--greenbg);border-color:var(--green)" : st === "overdue" ? "background:var(--red);color:#fff;border-color:var(--red)" : (st === "locked" || st === "future") ? "background:var(--soft);color:#8C857B" : "";
+      const ov = S.done[a.id + ":override"];
+      const t = h("div", { style: "border:1.5px solid var(--line);border-radius:7px;padding:3px 6px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;" + bg + (ov ? ";outline:2px dashed var(--ink);outline-offset:-2px" : "") }, a.label.replace(" · by 5 pm", ""));
+      t.style.boxShadow = "inset 4px 0 0 " + FX[freqOf(a).k][1]; longPress(t, () => sheetFor(a)); if (swapPendingOn(a.id)) t.style.outline = "2px solid var(--amber)";
+      t.addEventListener("click", () => isMgr() ? quickPick(a) : isBoard() ? sheetFor(a) : effPerson(a) === S.me ? (swapOpen(a) ? swapSheet(a) : sheetFor(a)) : (swapOpen(a) ? takeSheet(a) : sheetFor(a))); return t; };
+    { g.appendChild(h("div", { style: "padding:6px;font-weight:700;color:var(--mute);border-top:1px solid var(--soft)" }, "Zones"));
+      for (const p of cols) { const cell = h("div", { style: "padding:5px;border-left:1px solid var(--soft);border-top:1px solid var(--soft);display:flex;flex-direction:column;gap:3px;min-width:0" });
+        for (const a of W.assignments.filter(a => a.kind === "zone" && effPerson(a) === p)) cell.appendChild(tileEl(a)); g.appendChild(cell); } }
     const rows = E.DAYS.map((d, i) => [d, E.addDays(W.week, i)]).concat([["Wknd", "wknd"]]);
     for (const [d, date] of rows) {
       g.appendChild(h("div", { style: "padding:6px;font-weight:700;color:var(--mute);border-top:1px solid var(--soft)" + (date === S.today ? ";color:var(--ink)" : "") }, d));
       for (const p of cols) {
         const cell = h("div", { style: "padding:5px;border-left:1px solid var(--soft);border-top:1px solid var(--soft);display:flex;flex-direction:column;gap:3px;min-width:0" });
         if (isMgr() && date !== "wknd" && date >= S.today) { const clr = h("button", { class: "clrday", title: "Clear " + R.people[p].label + "'s day", onclick: () => clearDaySheet(p, date) }, "clear day"); cell.appendChild(clr); }
-        const items = W.assignments.filter(a => effPerson(a) === p && a.kind !== "arrival" && a.kind !== "streak" && a.chore !== "putaway" && a.chore !== "roomReset" && !a.bathDay && !a.auto && (date === "wknd" ? (!a.date && a.window === "wknd") : (a.date === date || (date === E.addDays(W.week, 6) && !a.date && a.window === "week"))));
-        for (const a of items) {
-          const st = state(a);
-          const bg = st === "done" ? "background:var(--greenbg);border-color:var(--green)" : st === "overdue" ? "background:var(--red);color:#fff;border-color:var(--red)" : (st === "locked" || st === "future") ? "background:var(--soft);color:#8C857B;border-color:var(--soft2)" : a.fixed ? "background:#EFEDE8" : "";
-          const t = h("div", { style: "border:1.5px solid var(--line);border-radius:7px;padding:3px 6px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" + bg }, a.label);
-          t.style.boxShadow = "inset 4px 0 0 " + FX[freqOf(a).k][1]; longPress(t, () => sheetFor(a)); t.addEventListener("click", () => (isMgr() ? quickPick(a) : sheetFor(a))); cell.appendChild(t);
-        }
+        const items = W.assignments.filter(a => effPerson(a) === p && a.kind !== "arrival" && a.kind !== "streak" && a.chore !== "putaway" && a.chore !== "roomReset" && !a.bathDay && a.kind !== "zone" && (!a.auto || a.chore === "cook") && (date === "wknd" ? (!a.date && a.window === "wknd") : (a.date === date || (date === E.addDays(W.week, 6) && !a.date && a.window === "week"))));
+        for (const a of items) cell.appendChild(tileEl(a));
         g.appendChild(cell);
       }
     }
     main.appendChild(g);
+    { const PM = E.plannedMinutes(R, W.assignments.filter(okBath).map(a => Object.assign({}, a, { person: effPerson(a) }))), TG = (W.balance && W.balance.target) || {};
+      main.appendChild(h("div", { class: "note", style: "margin-top:6px" }, "Planned minutes · " + R.order.map(p => R.people[p].label + " " + (PM[p] || 0) + (TG[p] != null ? " (target " + TG[p] + ")" : "")).join(" · ")));
+      main.appendChild(h("div", { class: "note" }, isMgr() ? "Tap any job to give it to someone else or cancel it · dashed = reassigned · amber = swap asked" : "Tap your job to offer a swap, or someone else's to ask for it · amber = swap asked")); }
     main.appendChild(legend());
     const sun = E.addDays(W.week, 6);
     if (S.me === "Mama") {
