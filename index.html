@@ -198,6 +198,14 @@
   .shoprow.done > .stxt { text-decoration:line-through; color:var(--mute); font-weight:500; }
   .shoprow > .more { flex:0 0 auto; border:none; background:none; font-size:20px; color:var(--mute); padding:0 4px; }
   .shopedit { display:flex; gap:6px; flex-wrap:wrap; padding:6px 4px 2px 40px; }
+  .daypick { display:grid; grid-template-columns:repeat(8, minmax(0,1fr)); gap:4px; margin-bottom:10px; }
+  .daypick button { border:1.5px solid var(--line); background:var(--card); border-radius:10px; padding:6px 0; display:flex; flex-direction:column; align-items:center; font-size:12px; color:var(--ink); }
+  .daypick button b { font-size:13px; } .daypick button.today { border-color:var(--ink); } .daypick button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .daylist { display:flex; flex-direction:column; gap:8px; }
+  .dayrow { background:var(--card); border:1.5px solid var(--line); border-radius:12px; padding:10px 12px; }
+  .dayrow .dwho { font-weight:700; font-size:16px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; }
+  .dayrow .jobs { display:flex; flex-direction:column; gap:5px; }
+  .dayrow .jobs > div { white-space:normal !important; font-size:15px; padding:7px 10px !important; }
   .shopadd { display:flex; gap:8px; } .shopadd input { flex:1; }
   .shopcats { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
   .shopcats button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
@@ -304,9 +312,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794123871"></script>
-<script src="./engine.js?v=1794123871"></script>
-<script>window.VATRA_BUILD="1794123871";</script>
+<script src="./rules.js?v=1794124200"></script>
+<script src="./engine.js?v=1794124200"></script>
+<script>window.VATRA_BUILD="1794124200";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -368,10 +376,12 @@
   };
   // from Sun 15 Nov the schedule runs Sunday to Saturday (Mama, 8 Nov 02:40). Week docs keep their Monday key;
   // a week keyed SUN_WEEKS or later covers the Sunday before its Monday through Saturday.
-  const SUN_WEEKS = "2026-11-16";
-  const wkStart = (wk) => wk >= SUN_WEEKS ? E.addDays(wk, -1) : wk;
-  const wkDates = (wk) => [0, 1, 2, 3, 4, 5, 6].map(i => E.addDays(wkStart(wk), i)).filter(d => !(wk === "2026-11-09" && d === "2026-11-15")); // the 9 Nov week ends Saturday 14
-  const monday = () => E.mondayOf(S.today >= E.addDays(SUN_WEEKS, -1) ? E.addDays(S.today, 1) : S.today);
+  const SUN_WEEKS = "2026-11-16"; // generated weeks from here move their own Sunday to the start
+  const FIRST_SUN = "2026-11-09"; // the 9 Nov week already starts Sunday 8: same assignments, today's Sunday jobs join it (Mama, 8 Nov 02:47)
+  const wkStart = (wk) => wk >= FIRST_SUN ? E.addDays(wk, -1) : wk;
+  const wkDates = (wk) => [0, 1, 2, 3, 4, 5, 6].map(i => E.addDays(wkStart(wk), i));
+  const monday = () => E.mondayOf(S.today >= E.addDays(FIRST_SUN, -1) ? E.addDays(S.today, 1) : S.today);
+  const SUN8 = "2026-11-08"; let _sun8 = [];
 
   // ---------- local fallback store (no db) ----------
   const local = {
@@ -514,7 +524,8 @@
     const OFFP = ((S.settings && S.settings.offPick) || {})[wkDoc.week] || "";
     const ovr = OFFP ? Object.keys(S.done).filter(k => k.endsWith(":override") && k.startsWith(wkDoc.week)).map(k => k + S.done[k].person).join(",") : "";
     const key = wkDoc.generatedAt + "|" + moves.map(m => m.id + m.date).join(",") + "|" + JSON.stringify(STD) + "|" + OFFP + "|" + ovr;
-    const c = _vc[wkDoc.week]; if (c && c.key === key) return c.v;
+    let key2 = key; if (wkDoc.week === FIRST_SUN) { const d2 = [S.prevWeek, S.week].find(x => x && x.week === "2026-11-02"); if (d2) { viewOf(d2); key2 = key + "|" + ((_vc["2026-11-02"] || {}).key || ""); } }
+    const c = _vc[wkDoc.week]; if (c && c.key === key2) return c.v;
     const byLoad = {}; for (const m of moves) if (m.move) byLoad[m.load] = m.date;
     const cancelled = new Set(moves.filter(m => m.cancel).map(m => m.load));
     const w = Object.assign({}, wkDoc, { assignments: wkDoc.assignments.filter(a => !(HIDE_TATA.includes(a.chore) && a.person === "Tata") && (a.load == null || !cancelled.has(a.load)) && !(R.startDate && (a.date || a.due) < R.startDate)).map(a => {
@@ -604,6 +615,9 @@
       w.assignments = w.assignments.map(x => x.date === sun7 ? Object.assign({}, x, { date: sun0, due: x.due === sun7 ? sun0 : x.due }) : (!x.date && x.due === sun7) ? Object.assign({}, x, { due: sat, dueSun: false }) : x); }
     // the last Monday week ends Saturday 14 Nov: its Sunday 15 now belongs to the next week
     if (wkDoc.week === "2026-11-09") w.assignments = w.assignments.filter(x => x.date !== "2026-11-15").map(x => (!x.date && x.due === "2026-11-15") ? Object.assign({}, x, { due: "2026-11-14", dueSun: false }) : x);
+    // Sunday 8 belongs to the 9 Nov week: the 2 Nov week hands over its Sunday jobs unchanged (same people, same ids)
+    if (wkDoc.week === "2026-11-02") { _sun8 = w.assignments.filter(x => x.kind !== "zone" && (x.date === SUN8 || (!x.date && x.due === SUN8))); w.assignments = w.assignments.filter(x => !_sun8.includes(x)); }
+    if (wkDoc.week === FIRST_SUN) w.assignments = _sun8.concat(w.assignments);
     // no My Room Reset on the day you have My Room Deep (Saturday) (Mama, 7 Nov 21:01)
     { const deep = {}; for (const x of w.assignments) if (x.chore === "roomDeep") deep[x.person + "|" + (x.date || x.due)] = 1;
       w.assignments = w.assignments.filter(x => !(x.chore === "roomReset" && deep[x.person + "|" + x.date])); }
@@ -613,7 +627,7 @@
         w.assignments.push({ id: z.id + "@" + date, week: wkDoc.week, kind: "bathDay", bathDay: true, zoneRef: z.id, chore: z.chore, label: z.label + " · " + E.dow(date), person: z.person, date, due: date, minutes: Math.max(1, Math.round((z.minutes || 35) / 7)), counts: false, quiet: true }); }
     }
     w.assignments = E.applyStd(R, w.assignments.map(x => Object.assign({}, x))).map(x => STD[x.chore] && x.minutes > 0 ? Object.assign({}, x, { minutes: STD[x.chore] }) : x);
-    _vc[wkDoc.week] = { key, v: w }; return w;
+    _vc[wkDoc.week] = { key: key2, v: w }; return w;
   }
   async function cancelLoad(a) {
     const id = S.week.week + "#load" + a.load + ":cancel";
@@ -1751,7 +1765,7 @@
     // 3. everything else as chips; done ones fade out after an hour
     const chips = h("div", { class: "bchips" }), doneChips = h("div", { class: "bchips" });
     const fresh = (a) => { const dd = S.done[a.id]; return !dd || !dd.at || Date.now() - new Date(dd.at) < 3600000; };
-    const isWk = E.dow(d) === "Sat" || (E.dow(d) === "Sun" && W.week < SUN_WEEKS);
+    const isWk = E.dow(d) === "Sat" || (E.dow(d) === "Sun" && W.week < FIRST_SUN);
     const todays = W.assignments.filter(a => !["evening", "zone", "arrival", "streak"].includes(a.kind) && !a.own && a !== gb && a.chore !== "dishPrep" && (a.date === d || (!a.date && a.window === "wknd" && isWk) || (!a.date && a.window === "week" && a.due === d)));
     for (const a of todays) {
       const st = state(a); const folded = (st === "done" && !fresh(a)) || st === "cancelled";
@@ -1867,7 +1881,7 @@
     const W = V();
     const my = W.assignments.filter(a => a.kind !== "zone" && okBath(a)).concat(zoneTiles()).filter(a => isMineTile(a) && a.kind !== "arrival" && a.kind !== "streak" && (!a.bathDay || state(a) === "overdue")).concat(carried().filter(isMineTile)).concat(askTiles().filter(a => effPerson(a) === S.me && (a.date >= S.today || state(a) !== "done")));
     // Today first: today's dated jobs, the week-long zones (daily), weekly any-day jobs, weekend jobs on Sat/Sun, anything overdue.
-    const isWknd = E.dow(S.today) === "Sat" || (E.dow(S.today) === "Sun" && S.week && S.week.week < SUN_WEEKS); // Sunday now starts the week
+    const isWknd = E.dow(S.today) === "Sat" || (E.dow(S.today) === "Sun" && S.week && S.week.week < FIRST_SUN); // Sunday now starts the week
     const isToday = (a) => a.date === S.today || a.kind === "zone" || (!a.date && a.window === "week") || (!a.date && a.window === "wknd" && isWknd) || state(a) === "overdue";
     const todayList = my.filter(isToday).filter(a => !(a.date && a.date < S.today && state(a) !== "overdue"));
     const rank = (a) => { if (a.kind === "zone" && !a.carried && zoneToday(a)) return 3; if (lateOpen(a)) return -1; const st = state(a); return st === "overdue" ? 0 : st === "done" || st === "cancelled" ? 3 : st === "locked" ? 2 : 1; }; // orange (late, still open) first (Mama, 5 Nov 22:00)
@@ -2033,7 +2047,7 @@
     // Mama's weekly board (8 Nov 02:29): This week / Next week, zones + Chef included, tap any job to reassign, planned minutes per person
     const hasNext = !!S.nextWeek; if (!hasNext) S._wkSel = "this";
     const W = S._wkSel === "next" && hasNext ? viewOf(S.nextWeek) : V();
-    if (hasNext) main.appendChild(h("div", { class: "tabs seg", style: "--n:2;margin-bottom:8px" }, [["this", "This week · " + fmtDay(V().week)], ["next", "Next week · " + fmtDay(S.nextWeek.week)]].map(([k, l]) => h("button", { class: (S._wkSel || "this") === k ? "on" : "", onclick: () => { S._wkSel = k; render(); } }, l))));
+    if (hasNext) main.appendChild(h("div", { class: "tabs seg", style: "--n:2;margin-bottom:8px" }, [["this", "This week · " + fmtDay(wkStart(V().week))], ["next", "Next week · " + fmtDay(wkStart(S.nextWeek.week))]].map(([k, l]) => h("button", { class: (S._wkSel || "this") === k ? "on" : "", onclick: () => { S._wkSel = k; render(); } }, l))));
     { const sc = swapCards(); if (sc) main.appendChild(h("div", { style: "margin-bottom:8px" }, h("div", { class: "label" }, "Swap requests"), sc)); }
     const cols = R.order;
     const g = h("div", { style: "display:grid;grid-template-columns:56px repeat(" + cols.length + ", minmax(0,1fr));gap:0;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;font-size:12px" });
@@ -2049,17 +2063,28 @@
       for (const p of cols) { const cell = h("div", { style: "padding:5px;border-left:1px solid var(--soft);border-top:1px solid var(--soft);display:flex;flex-direction:column;gap:3px;min-width:0" });
         for (const a of W.assignments.filter(a => a.kind === "zone" && effPerson(a) === p)) cell.appendChild(tileEl(a)); g.appendChild(cell); } }
     const rows = wkDates(W.week).map(dt => [E.dow(dt), dt]).concat([["Wknd", "wknd"]]);
+    const cellItems = (p, date) => W.assignments.filter(a => effPerson(a) === p && a.kind !== "arrival" && a.kind !== "streak" && a.chore !== "putaway" && a.chore !== "roomReset" && !a.bathDay && a.kind !== "zone" && (!a.auto || a.chore === "cook") && (date === "wknd" ? (!a.date && a.window === "wknd") : (a.date === date || (!a.date && a.window === "week" && a.due === date))));
+    // phones: one day at a time, full names (Mama, 8 Nov 02:48 "too cramped")
+    if (window.innerWidth < 700 && !isBoard()) {
+      const keys = rows.map(r => r[1]); if (!keys.includes(S._wkDay)) S._wkDay = keys.includes(S.today) ? S.today : keys[0];
+      main.appendChild(h("div", { class: "daypick" }, rows.map(([d, date]) => h("button", { class: (S._wkDay === date ? "on" : "") + (date === S.today ? " today" : ""), onclick: () => { S._wkDay = date; render(); } }, h("b", {}, d), date === "wknd" ? "" : h("span", {}, String(+date.slice(8)))))));
+      const box = h("div", { class: "daylist" });
+      const zs = W.assignments.filter(a => a.kind === "zone");
+      if (S._wkDay !== "wknd" && zs.length) box.appendChild(h("div", { class: "dayrow" }, h("div", { class: "dwho" }, "Zones"), h("div", { class: "jobs" }, zs.map(a => { const t = tileEl(a); t.textContent = a.label + " · " + R.people[effPerson(a)].label; return t; }))));
+      for (const p of cols) { const its = cellItems(p, S._wkDay); box.appendChild(h("div", { class: "dayrow" }, h("div", { class: "dwho" }, R.people[p].label, isMgr() && S._wkDay !== "wknd" && S._wkDay >= S.today && its.length ? h("button", { class: "clrday", onclick: () => clearDaySheet(p, S._wkDay) }, "clear day") : null), h("div", { class: "jobs" }, its.length ? its.map(tileEl) : h("span", { class: "note" }, "free")))); }
+      main.appendChild(box);
+    } else {
     for (const [d, date] of rows) {
       g.appendChild(h("div", { style: "padding:6px;font-weight:700;color:var(--mute);border-top:1px solid var(--soft)" + (date === S.today ? ";color:var(--ink)" : "") }, d));
       for (const p of cols) {
         const cell = h("div", { style: "padding:5px;border-left:1px solid var(--soft);border-top:1px solid var(--soft);display:flex;flex-direction:column;gap:3px;min-width:0" });
         if (isMgr() && date !== "wknd" && date >= S.today) { const clr = h("button", { class: "clrday", title: "Clear " + R.people[p].label + "'s day", onclick: () => clearDaySheet(p, date) }, "clear day"); cell.appendChild(clr); }
-        const items = W.assignments.filter(a => effPerson(a) === p && a.kind !== "arrival" && a.kind !== "streak" && a.chore !== "putaway" && a.chore !== "roomReset" && !a.bathDay && a.kind !== "zone" && (!a.auto || a.chore === "cook") && (date === "wknd" ? (!a.date && a.window === "wknd") : (a.date === date || (date === E.addDays(W.week, 6) && !a.date && a.window === "week"))));
-        for (const a of items) cell.appendChild(tileEl(a));
+        for (const a of cellItems(p, date)) cell.appendChild(tileEl(a));
         g.appendChild(cell);
       }
     }
     main.appendChild(g);
+    }
     { const PM = E.plannedMinutes(R, W.assignments.filter(okBath).map(a => Object.assign({}, a, { person: effPerson(a) }))), TG = (W.balance && W.balance.target) || {};
       main.appendChild(h("div", { class: "note", style: "margin-top:6px" }, "Planned minutes · " + R.order.map(p => R.people[p].label + " " + (PM[p] || 0) + (TG[p] != null ? " (target " + TG[p] + ")" : "")).join(" · ")));
       main.appendChild(h("div", { class: "note" }, isMgr() ? "Tap any job to give it to someone else or cancel it · dashed = reassigned · amber = swap asked" : "Tap your job to offer a swap, or someone else's to ask for it · amber = swap asked")); }
