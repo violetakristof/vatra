@@ -22,6 +22,7 @@
   .brand span { overflow:hidden; text-overflow:ellipsis; }
   .topbtns { display:flex; gap:6px; align-items:center; flex:0 0 auto; }
   .ibtn { width:40px; height:40px; border-radius:12px; border:1.5px solid var(--line); background:var(--card); font-size:18px; display:inline-flex; align-items:center; justify-content:center; padding:0; color:var(--ink); }
+  .ibtn.lbl { width:auto; padding:0 12px; font-size:14px; font-weight:600; gap:5px; }
   .ibtn.shopurg { border-color:var(--red); color:var(--red); width:auto; padding:0 10px; font-weight:700; font-size:15px; }
   .tabs.seg { display:grid; grid-template-columns:repeat(var(--n), 1fr); width:100%; }
   .tabs.seg button { text-align:center; white-space:nowrap; }
@@ -131,7 +132,7 @@
   @media (max-width: 760px) {
     .top { padding:10px 12px; gap:8px; }
     .brand b { font-size:20px; } .brand span { font-size:13px; }
-    .dlong { display:none; } .dshort { display:inline !important; }
+    .dlong, .dshort, .swl { display:none !important; }
     .people { gap:5px; }
     .person { padding:6px 4px; min-height:46px; border-radius:12px; align-items:center; text-align:center; }
     .person .pn { font-size:13px; }
@@ -287,9 +288,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794119583"></script>
-<script src="./engine.js?v=1794119583"></script>
-<script>window.VATRA_BUILD="1794119583";</script>
+<script src="./rules.js?v=1794119683"></script>
+<script src="./engine.js?v=1794119683"></script>
+<script>window.VATRA_BUILD="1794119683";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1460,11 +1461,11 @@
     }));
     const tabList = isBoard() ? [["tonight", "Tonight"], ["week", "This week"], ["sunday", "Review"]] : [["mine", "Mine"], ["tonight", "Tonight"], ["week", "This week"], ["sunday", "Review"]];
     const tabs = h("div", { class: "tabs seg", style: "--n:" + tabList.length }, tabList.map(([k, l]) => h("button", { class: S.tab === k ? "on" : "", onclick: () => { S.tab = k; render(); } }, l)));
-    const me = S.me ? (() => { const sw = () => { localStorage.removeItem("vatra.me"); S.me = null; render(); }; const b = h("button", { class: "mepill", title: isBoard() ? "Hold to change this device" : "Switch person", onclick: isBoard() ? null : sw }, (R.people[S.me] || {}).label || "Kitchen board"); if (isBoard()) longPress(b, sw); return b; })() : null;
+    const me = S.me ? (() => { const sw = () => { localStorage.removeItem("vatra.me"); S.me = null; render(); }; const b = h("button", { class: "mepill", title: isBoard() ? "Hold to change this device" : "Switch person", onclick: isBoard() ? null : sw }, "👤 " + ((R.people[S.me] || {}).label || "Kitchen board"), isBoard() ? null : h("span", { class: "swl" }, " · switch")); if (isBoard()) longPress(b, sw); return b; })() : null;
     const u = shopOpenItems().filter(x => isUrg(x)).length;
     const acts = h("div", { class: "topbtns" }, me,
-      h("button", { class: "ibtn", title: "Ask", onclick: askSheet }, "🙋"),
-      h("button", { class: "ibtn" + (u ? " shopurg" : ""), title: "Shopping list", onclick: shopSheet }, u ? "🛒" + u : "🛒"),
+      h("button", { class: "ibtn lbl", title: "Ask", onclick: askSheet }, "🙋 Ask"),
+      h("button", { class: "ibtn lbl" + (u ? " shopurg" : ""), title: "Shopping list", onclick: shopSheet }, u ? "🛒 Shop " + u + "!" : "🛒 Shop"),
       h("button", { class: "ibtn", title: "More", onclick: moreSheet }, "⋯"));
     return h("div", { class: "top" },
       h("div", { class: "toprow" }, h("div", { class: "brand" }, h("b", {}, "Vatra"), h("span", { class: "dlong" }, fmtDay(S.today).replace(/, \d{4}$/, "") + " · " + nowHM()), h("span", { class: "dshort" }, new Date(S.today + "T12:00").toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" }))), acts),
