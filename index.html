@@ -225,6 +225,8 @@
   @media (max-width:700px) { .menustrip { grid-template-columns:none; grid-auto-flow:column; grid-auto-columns:96px; overflow-x:auto; padding-bottom:4px; } }
   .mealline { font-size:17px; font-weight:700; color:var(--ink); margin:2px 0 4px; line-height:1.25; }
   .bstep .mealline { font-size:15px; }
+  .mealline.todo { font-size:14px; font-weight:600; color:var(--amberink); }
+  .mealset:not(.done) { background:var(--warm2) !important; border-color:var(--amber) !important; }
   .mealnow { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px 14px; border-radius:14px; background:var(--soft); margin-bottom:10px; }
   .mealnow .k { font-size:12px; color:var(--mute); font-weight:700; } .mealnow .n { font-size:19px; font-weight:700; margin-top:2px; }
   .shoprow > .stxt .swho { display:block; margin-left:0 !important; margin-top:1px; }
@@ -333,9 +335,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794154385"></script>
-<script src="./engine.js?v=1794154385"></script>
-<script>window.VATRA_BUILD="1794154385";</script>
+<script src="./rules.js?v=1794154702"></script>
+<script src="./engine.js?v=1794154702"></script>
+<script>window.VATRA_BUILD="1794154702";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1154,6 +1156,9 @@
      meal ideas are shop docs with meal:true; mealDate = the night it's cooked (planned or past) */
   const mealsAll = () => S.shop.filter(x => x.meal && !x.deleted && x.status !== "bought");
   const mealFor = (d) => mealsAll().find(x => x.mealDate === d);
+  /* the Chef tile shows the meal everywhere (Mine, Tonight, Board); picked = warm fill + bold line, not yet = a quiet prompt (Mama, 8 Nov 11:17) */
+  const mealLine = (a) => { if (!a || a.chore !== "cook") return null; const d = a.date || S.today, m = mealFor(d); if (m) return h("div", { class: "mealline" }, "🍲 " + m.text); const st = state(a); return d === S.today && st !== "cancelled" && st !== "done" ? h("div", { class: "mealline todo" }, "🍲 Meal not picked · hold to choose") : null; };
+  const mealMark = (el, a) => { if (a && a.chore === "cook" && mealFor(a.date || S.today)) el.classList.add("mealset"); return el; };
   const canPlan = () => isBoard() || S.me === "Tata" || S.me === "Mama";
   const planMeal = async (x, d) => { const prev = d ? mealFor(d) : null; if (prev && prev.id !== x.id) await store.writeShop(Object.assign({}, prev, { mealDate: null })); await store.writeShop(Object.assign({}, x, { mealDate: d || null })); refreshShopSheet(); render(); };
   async function addMealIdea(text, by) { const now = new Date().toISOString(); const x = { id: "shop_" + Date.now(), text, by, at: now, date: S.today, status: "open", urgent: false, costco: false, lufa: false, meal: true };
@@ -1802,10 +1807,10 @@
     const claimed = a.auto && S.done[a.id + ":override"];
     const isAuto = a.auto && !claimed && !S.done[a.id] && st !== "cancelled";
     const t = h("div", { class: "tile " + (cls || "") + " " + (isAuto ? "auto" : st) + (S.running[a.id] ? " running" : "") },
-      h("div", { class: "k" }, a.label), nameEl(a, a.unassigned && !S.done[a.id + ":override"] ? (a.note || "not set") : (R.people[effPerson(a)] || {}).label || "—"), a.chore === "cook" && mealFor(a.date || S.today) ? h("div", { class: "mealline" }, "🍲 " + mealFor(a.date || S.today).text) : null, h("div", { class: "s" }, isAuto ? "Done by 8 pm" : sub(a, st)), h("div", { class: "s", style: "color:var(--ink);margin-top:2px" }, R.short[a.chore] || ""),
+      h("div", { class: "k" }, a.label), nameEl(a, a.unassigned && !S.done[a.id + ":override"] ? (a.note || "not set") : (R.people[effPerson(a)] || {}).label || "—"), mealLine(a), h("div", { class: "s" }, isAuto ? "Done by 8 pm" : sub(a, st)), h("div", { class: "s", style: "color:var(--ink);margin-top:2px" }, R.short[a.chore] || ""),
       a.unassigned ? null : h("div", { class: "acts" }, isAuto ? [].concat(acts(a, st), S.me !== a.person ? [h("button", { class: "btn ghost", onclick: () => asWho(R.order.filter(p => p !== a.person), "Who's cooking tonight?", (p) => override(a, p, "claim")) }, "I'll cook")] : []) : [].concat(acts(a, st), unclaimBtn(a, st) || [])));
     fx(t, a); markLate(t, a);
-    longPress(t, () => sheetFor(a));
+    longPress(t, () => sheetFor(a)); mealMark(t, a);
     return t;
   }
 
@@ -1845,9 +1850,9 @@
       const t = h("div", { class: "bstep " + (isAuto ? "auto" : st) + (isActive ? " active" : "") + (S.pomo[a.id] ? " running" : "") },
         h("div", { class: "k" }, a.label), isActive ? h("div", { class: "now" }, "Now") : null,
         nameEl(a, a.unassigned && !S.done[a.id + ":override"] ? (a.note || "not set") : (R.people[effPerson(a)] || {}).label || "—"),
-        a.chore === "cook" && mealFor(a.date || S.today) ? h("div", { class: "mealline" }, "🍲 " + mealFor(a.date || S.today).text) : null, h("div", { class: "s" }, isAuto ? "Done by 8 pm" : sub(a, st)),
+        mealLine(a), h("div", { class: "s" }, isAuto ? "Done by 8 pm" : sub(a, st)),
         a.unassigned ? null : h("div", { class: "acts" }, isAuto ? [].concat(acts(a, st, isActive), S.me !== a.person ? [h("button", { class: "btn ghost sm", onclick: () => asWho(R.order.filter(p => p !== a.person), "Who's cooking tonight?", (p) => override(a, p, "claim")) }, "I'll cook")] : []) : [].concat(acts(a, st, isActive), unclaimBtn(a, st) || [])));
-      fx(t, a); markLate(t, a); longPress(t, () => sheetFor(a)); return t;
+      fx(t, a); markLate(t, a); longPress(t, () => sheetFor(a)); mealMark(t, a); return t;
     })));
     { const settled = steps.length && steps.every(a => ["done", "cancelled", "passed"].includes(state(a)) || (a.auto && S.done[a.id])); if (settled) { chain.classList.add("calm"); main.appendChild(sec("Dinner organization", h("div", {}, h("div", { class: "calmbar", style: "margin-bottom:8px" }, "✓ Dinner done for tonight"), chain))); } else main.appendChild(sec("Dinner organization", chain)); }
     if (isMgr()) { const evs = evSteps; const allOff = evs.length && evs.every(x => S.done[x.id + ":skip"] || S.done[x.id]);
@@ -1987,7 +1992,7 @@
       const on = a && S.done[a.id];
       S._arrivalRow = null; // the top chip is the home button (Mama, 8 Nov 01:09)
     }
-    const row = (a) => { if (a._zoneDay) { const li = h("div", { class: "li future" }, h("div", {}, h("div", { class: "n" }, a.label + " · every day"), h("div", { class: "s" }, R.short[a.chore] || ""))); fx(li, a); return li; } const st = state(a); const li = h("div", { class: "li " + (a.kind === "zone" && !a.carried && zoneToday(a) && st !== "overdue" ? "done" : st) }, h("div", {}, h("div", { class: "n" }, a.label + (a.carried ? " · from last week" : a.kind === "zone" ? " · every day" : "")), h("div", { class: "s" }, a.kind === "zone" && !a.carried ? zoneDaysTxt(a) : (sub(a, st) || (st === "future" ? "later" : ""))), h("div", { class: "s", style: "color:var(--ink)" }, R.short[a.chore] || "")), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end" }, a.kind === "zone" && !a.carried ? zoneActs(a) : acts(a, st))); fx(li, a); markLate(li, a, true); longPress(li, () => sheetFor(a)); return li; };
+    const row = (a) => { if (a._zoneDay) { const li = h("div", { class: "li future" }, h("div", {}, h("div", { class: "n" }, a.label + " · every day"), h("div", { class: "s" }, R.short[a.chore] || ""))); fx(li, a); return li; } const st = state(a); const li = h("div", { class: "li " + (a.kind === "zone" && !a.carried && zoneToday(a) && st !== "overdue" ? "done" : st) }, h("div", {}, h("div", { class: "n" }, a.label + (a.carried ? " · from last week" : a.kind === "zone" ? " · every day" : "")), mealLine(a), h("div", { class: "s" }, a.kind === "zone" && !a.carried ? zoneDaysTxt(a) : (sub(a, st) || (st === "future" ? "later" : ""))), h("div", { class: "s", style: "color:var(--ink)" }, R.short[a.chore] || "")), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end" }, a.kind === "zone" && !a.carried ? zoneActs(a) : acts(a, st))); fx(li, a); markLate(li, a, true); longPress(li, () => sheetFor(a)); mealMark(li, a); return li; };
     main.appendChild(h("div", {}, h("div", { class: "label", style: "color:var(--ink)" }, "Today · " + fmtDay(S.today)), h("div", { class: "list" }, ...(() => { const shopRows = (S.me === "Tata" && (shopOpenItems().some(x => isUrg(x)) || W.assignments.some(x => (x.chore === "shop" || x.chore === "costco") && (x.date === S.today || shopFri(x, S.today) || (!x.date && ["Sat", "Sun"].includes(E.dow(S.today)))))) ? [(() => { const open = shopOpenItems(); const li = h("div", { class: "li" + (open.some(x => isUrg(x)) ? " overdue" : "") }, h("div", {}, h("div", { class: "n" }, "🛒 Shopping list"), h("div", { class: "s" }, open.length + " to buy" + (open.some(x => isUrg(x)) ? " · " + open.filter(x => isUrg(x)).length + " urgent" : "") + (open.some(x => x.meal) ? " · " + open.filter(x => x.meal).length + " meal ideas" : ""))), h("button", { class: "btn", onclick: shopSheet }, "Open")); li.addEventListener("click", (e) => { if (e.target.tagName !== "BUTTON") shopSheet(); }); return li; })()] : []); const dr = null, late = false; const openT = todayList.filter(a => rank(a) < 3), doneT = todayList.filter(a => rank(a) >= 3); const rows = openT.map(row).concat(doneT.length ? [foldBox("✓ Done today (" + doneT.length + ")", doneT.map(row), "_doneOpen")] : []); const nLate = todayList.filter(lateOpen).length; // orange jobs above everything, even the 🛒 row (Mama, 5 Nov 22:08)
       return rows.slice(0, nLate).concat(late ? [dr] : [], shopRows, rows.slice(nLate), late || !dr ? [] : [dr]); })())));
     if (S._arrivalRow) { main.appendChild(S._arrivalRow); S._arrivalRow = null; }
