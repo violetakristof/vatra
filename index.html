@@ -178,19 +178,22 @@
   body.board .streaks .chip { font-size:18px; padding:10px 16px; }
   body.board .pinkbar { font-size:26px; padding:18px; }
   .bzones { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:14px; }
-  .bzone { background:var(--card); border:2px solid var(--line); border-radius:18px; padding:16px 18px; display:flex; flex-direction:column; gap:8px; min-height:150px; position:relative; }
-  .bzone .k { font-size:13px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--mute); }
-  .bzone .n, .bzone .namebtn { font-size:34px; font-weight:800; line-height:1.05; }
+  .bzone { background:var(--card); border:2px solid var(--line); border-radius:20px; padding:20px 20px 16px; display:flex; flex-direction:column; gap:10px; min-height:210px; position:relative; box-shadow:0 4px 14px rgba(31,27,22,.06); }
+  .bzone .k { font-size:16px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--ink); }
+  .bzone .n, .bzone .namebtn { font-size:44px; font-weight:800; line-height:1; }
   .bzone .s { font-size:13px; color:var(--mute); }
-  .bzone .dots { font-size:20px; letter-spacing:3px; color:var(--green); line-height:1; }
+  .bzone .dots { font-size:26px; letter-spacing:4px; color:var(--green); line-height:1; }
   .bzone .dots .o { color:var(--soft2); } .bzone .dots .x { color:var(--red); } .bzone .dots .t { color:var(--amber); }
   .bzone .acts { margin-top:auto; display:flex; align-items:center; gap:8px; padding-top:6px; flex-wrap:wrap; }
-  .bzone .tick { font-size:22px; padding:12px 22px; border-radius:14px; }
+  .bzone .tick { font-size:24px; padding:14px 24px; border-radius:16px; }
   .bzone .tick.on { background:var(--green); border-color:var(--green); color:#fff; }
   .bzone.done { background:var(--greenbg); border-color:var(--green); }
   .bzone.overdue { border-color:var(--red); }
   .bzone .messbtn { margin-left:auto; }
-  .bchain { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:10px; }
+  .bchain { display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:10px; }
+  @media (max-width: 1100px) { .bchain { grid-template-columns:repeat(3, minmax(0,1fr)); } }
+  .bchain.calm .bstep { min-height:0; } .bchain.calm .bstep .s { display:none; } .bchain.calm .bstep .n, .bchain.calm .bstep .namebtn { font-size:18px; }
+  .calmbar { background:var(--greenbg); border:1.5px solid var(--green); color:var(--green); border-radius:14px; padding:12px 16px; font-weight:700; font-size:16px; }
   .bstep.off { background:var(--soft); border-style:dashed; border-color:var(--soft2); opacity:.6; }
   .bstep { background:var(--card); border:1.5px solid var(--line); border-radius:16px; padding:12px 14px; display:flex; flex-direction:column; gap:4px; min-height:110px; position:relative; }
   .bstep .k { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--mute); }
@@ -223,7 +226,7 @@
   .bchip.claim { background:var(--amberbg); border-color:var(--amber); }
   .bchip.unassigned { border-style:dashed; }
   body.board .mepill { opacity:.35; }
-  @media (max-width: 760px) { .bzones { grid-template-columns:1fr; } .bchain { grid-template-columns:1fr 1fr 1fr; } }
+  @media (max-width: 760px) { .bzones { grid-template-columns:1fr; } .bchain { grid-template-columns:1fr 1fr; } }
   .latebar { background:#E8892B; color:#fff; border-radius:12px; padding:10px 14px; font-size:14px; line-height:1.45; }
   .latetag { display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.08em; color:#fff; background:#E8892B; border-radius:5px; padding:1px 6px; margin:2px 0; }
   .redtag { display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.08em; color:#fff; background:var(--red); border-radius:5px; padding:1px 6px; margin:2px 0; }
@@ -1479,6 +1482,7 @@
   // after Done: optional Faster · About right · Slower (for 10 minutes)
   function paceRow(a) {
     const d = S.done[a.id]; if (!d || d.pace || !(a.minutes >= 10) || a.auto || !d.at || Date.now() - Date.parse(d.at) > 10 * 60000) return null;
+    if (isBoard()) return null; // calm board: Faster/Slower lives in the long-press sheet there (Mama, 8 Nov 00:58)
     if (!isBoard() && effPerson(a) !== S.me && S.me !== "Mama") return null;
     return h("div", { class: "pace" }, h("span", { class: "s" }, "How long?"),
       h("button", { class: "btn quiet sm", onclick: (e) => { e.stopPropagation(); paceSheet(a, "faster"); } }, "Faster"),
@@ -1598,7 +1602,8 @@
     const ev = (role) => W.assignments.find(a => a.kind === "evening" && a.role === role && a.date === d);
     const order = ["cook", "souschef", "dishes", "finisher"], evSteps = order.map(ev).filter(Boolean);
     const dp = W.assignments.find(a => a.chore === "dishPrep" && a.date === d);
-    const steps = (dp ? [dp] : []).concat(evSteps);
+    const gb = W.assignments.find(a => a.chore === "garbage" && a.date === d);
+    const steps = (dp ? [dp] : []).concat(evSteps).concat(gb ? [gb] : []);
     const active = steps.find(a => !a.optional && ["pending", "overdue"].includes(state(a)) && !(a.auto && !S.done[a.id + ":override"]));
     const chain = h("div", { class: "bchain" + (steps.length > 4 ? " five" : "") }, (dp ? [] : [h("div", { class: "bstep off" }, h("div", { class: "k" }, "Empty dishwasher + rack"), h("div", { class: "n", style: "color:var(--mute)" }, "—"), h("div", { class: "s" }, "no job on the weekend"))]).concat(steps.map(a => {
       const st = state(a), claimed = a.auto && S.done[a.id + ":override"], isAuto = a.auto && !claimed && !S.done[a.id] && st !== "cancelled", isActive = a === active;
@@ -1609,13 +1614,13 @@
         a.unassigned ? null : h("div", { class: "acts" }, isAuto ? [S.me !== a.person ? h("button", { class: "btn ghost sm", onclick: () => asWho(R.order.filter(p => p !== a.person), "Who's cooking tonight?", (p) => override(a, p, "claim")) }, "I'll cook") : null, cancelBtn(a, st)] : [].concat(acts(a, st, isActive), unclaimBtn(a, st) || [])));
       fx(t, a); markLate(t, a); longPress(t, () => sheetFor(a)); return t;
     })));
-    main.appendChild(sec("Dinner organization", chain));
+    { const settled = steps.length && steps.every(a => ["done", "cancelled", "passed"].includes(state(a)) || (a.auto && S.done[a.id])); if (settled) { chain.classList.add("calm"); main.appendChild(sec("Dinner organization", h("div", {}, h("div", { class: "calmbar", style: "margin-bottom:8px" }, "✓ Dinner done for tonight"), chain))); } else main.appendChild(sec("Dinner organization", chain)); }
     if (isMgr()) { const evs = evSteps; const allOff = evs.length && evs.every(x => S.done[x.id + ":skip"] || S.done[x.id]);
       main.appendChild(h("div", { style: "margin:-6px 0 10px" }, allOff && evs.some(x => S.done[x.id + ":skip"]) ? h("button", { class: "btn quiet sm", onclick: async () => { for (const x of evs) if (S.done[x.id + ":skip"]) await store.deleteDone(x.id + ":skip"); } }, "Dinner is back on") : h("button", { class: "btn quiet sm", style: "border-color:var(--red);color:var(--red)", onclick: noDinner }, "✕ No dinner tonight"))); }
     // 3. everything else as chips; done ones fade out after an hour
     const chips = h("div", { class: "bchips" }), doneChips = h("div", { class: "bchips" });
     const fresh = (a) => { const dd = S.done[a.id]; return !dd || !dd.at || Date.now() - new Date(dd.at) < 3600000; };
-    const todays = W.assignments.filter(a => (a.kind === "fixed" || (a.kind === "laundry" && !a.own)) && a.date === d);
+    const todays = W.assignments.filter(a => (a.kind === "fixed" || (a.kind === "laundry" && !a.own)) && a.date === d && a !== gb);
     for (const a of todays) {
       const st = state(a); const folded = (st === "done" && !fresh(a)) || st === "cancelled";
       const un = a.unassigned && !S.done[a.id + ":override"];
@@ -1626,7 +1631,8 @@
       fx(c, a); markLate(c, a); longPress(c, () => sheetFor(a)); (folded ? doneChips : chips).appendChild(c);
     }
     { const open = shopOpenItems(), u = open.filter(x => isUrg(x)).length; const c = h("div", { class: "bchip " + (u ? "overdue" : "") }, h("div", {}, h("div", { class: "k" }, "🛒 Shopping"), h("b", {}, open.length + " items" + (u ? " · " + u + " urgent" : ""))), h("button", { class: "btn sm", onclick: shopSheet }, "Open list")); chips.appendChild(c); }
-    main.appendChild(sec("Today", chips));
+    if (chips.children.length === 1 && todays.length) main.appendChild(sec("Today", h("div", {}, h("div", { class: "calmbar", style: "margin-bottom:8px" }, "✓ All of today's jobs are done"), chips)));
+    else main.appendChild(sec("Today", chips));
     if (doneChips.children.length) main.appendChild(foldBox("✓ Done today (" + doneChips.children.length + ")", [doneChips], "_boardDoneOpen"));
     main.appendChild(h("div", { class: "note", style: "text-align:right;font-size:11px" }, "Kitchen board · hold the 👤 pill to change this device"));
     const od = overdueList();
@@ -1728,7 +1734,7 @@
     const isWknd = ["Sat", "Sun"].includes(E.dow(S.today));
     const isToday = (a) => a.date === S.today || a.kind === "zone" || (!a.date && a.window === "week") || (!a.date && a.window === "wknd" && isWknd) || state(a) === "overdue";
     const todayList = my.filter(isToday).filter(a => !(a.date && a.date < S.today && state(a) !== "overdue"));
-    const rank = (a) => { if (lateOpen(a)) return -1; const st = state(a); return st === "overdue" ? 0 : st === "done" || st === "cancelled" ? 3 : st === "locked" ? 2 : 1; }; // orange (late, still open) first (Mama, 5 Nov 22:00)
+    const rank = (a) => { if (a.kind === "zone" && !a.carried && zoneToday(a)) return 3; if (lateOpen(a)) return -1; const st = state(a); return st === "overdue" ? 0 : st === "done" || st === "cancelled" ? 3 : st === "locked" ? 2 : 1; }; // orange (late, still open) first (Mama, 5 Nov 22:00)
     todayList.sort((x, y) => rank(x) - rank(y));
     const byDay = {};
     for (const a of my) { if (todayList.includes(a)) continue; if (a.date && a.date < S.today) continue; const k = a.date || (a.window === "wknd" ? "weekend" : "this week"); (byDay[k] = byDay[k] || []).push(a); }
@@ -1741,7 +1747,7 @@
       S._arrivalRow = h("div", { class: "li " + (on ? "done" : ""), style: "margin-top:10px;min-height:44px" }, h("div", {}, h("div", { class: "n", style: "font-size:14px" }, on ? "Home ✓" : "Arrival · tap when home"), h("div", { class: "s" }, "Hold for the steps")), h("button", { class: "btn quiet sm", onclick: () => arrival(S.me) }, on ? "Undo" : "I'm home"));
       longPress(S._arrivalRow, () => sheet(h("h3", {}, "Arrival"), h("p", {}, R.dod.arrival)));
     }
-    const row = (a) => { const st = state(a); const li = h("div", { class: "li " + (a.kind === "zone" && !a.carried && zoneToday(a) && st !== "overdue" ? "done" : st) }, h("div", {}, h("div", { class: "n" }, a.label + (a.carried ? " · from last week" : a.kind === "zone" ? " · every day" : "")), h("div", { class: "s" }, a.kind === "zone" && !a.carried ? zoneDaysTxt(a) : (sub(a, st) || (st === "future" ? "later" : ""))), h("div", { class: "s", style: "color:var(--ink)" }, R.short[a.chore] || "")), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end" }, a.kind === "zone" && !a.carried ? zoneActs(a) : acts(a, st))); fx(li, a); markLate(li, a); longPress(li, () => sheetFor(a)); return li; };
+    const row = (a) => { const st = state(a); const li = h("div", { class: "li " + (a.kind === "zone" && !a.carried && zoneToday(a) && st !== "overdue" ? "done" : st) }, h("div", {}, h("div", { class: "n" }, a.label + (a.carried ? " · from last week" : a.kind === "zone" ? " · every day" : "")), h("div", { class: "s" }, a.kind === "zone" && !a.carried ? zoneDaysTxt(a) : (sub(a, st) || (st === "future" ? "later" : ""))), h("div", { class: "s", style: "color:var(--ink)" }, R.short[a.chore] || "")), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end" }, a.kind === "zone" && !a.carried ? zoneActs(a) : acts(a, st))); fx(li, a); markLate(li, a, true); longPress(li, () => sheetFor(a)); return li; };
     main.appendChild(h("div", {}, h("div", { class: "label", style: "color:var(--ink)" }, "Today · " + fmtDay(S.today)), h("div", { class: "list" }, ...(() => { const shopRows = (S.me === "Tata" && (shopOpenItems().some(x => isUrg(x)) || W.assignments.some(x => (x.chore === "shop" || x.chore === "costco") && (x.date === S.today || (!x.date && ["Sat", "Sun"].includes(E.dow(S.today)))))) ? [(() => { const open = shopOpenItems(); const li = h("div", { class: "li" + (open.some(x => isUrg(x)) ? " overdue" : "") }, h("div", {}, h("div", { class: "n" }, "🛒 Shopping list"), h("div", { class: "s" }, open.length + " to buy" + (open.some(x => isUrg(x)) ? " · " + open.filter(x => isUrg(x)).length + " urgent" : "") + (open.some(x => x.meal) ? " · " + open.filter(x => x.meal).length + " meal ideas" : ""))), h("button", { class: "btn", onclick: shopSheet }, "Open")); li.addEventListener("click", (e) => { if (e.target.tagName !== "BUTTON") shopSheet(); }); return li; })()] : []); const dr = null, late = false; const openT = todayList.filter(a => rank(a) < 3), doneT = todayList.filter(a => rank(a) >= 3); const rows = openT.map(row).concat(doneT.length ? [foldBox("✓ Done today (" + doneT.length + ")", doneT.map(row), "_doneOpen")] : []); const nLate = todayList.filter(lateOpen).length; // orange jobs above everything, even the 🛒 row (Mama, 5 Nov 22:08)
       return rows.slice(0, nLate).concat(late ? [dr] : [], shopRows, rows.slice(nLate), late || !dr ? [] : [dr]); })())));
     if (S._arrivalRow) { main.appendChild(S._arrivalRow); S._arrivalRow = null; }
