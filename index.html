@@ -464,7 +464,7 @@
     // Finisher is ~30 min since rules 1.10; weeks stored earlier still say 15
     w.assignments = w.assignments.map(x => x.chore === "finisher" && x.minutes < R.buckets.L ? Object.assign({}, x, { minutes: R.buckets.L }) : x);
     // Mama's standards (7 Nov 21:42): Costco = Shop + Costco, Kitchen deep = drawers + stove (monthly), no Own drawers
-    w.assignments = w.assignments.filter(x => !(x.chore === "ensuite" && / · helper/.test(x.label || "")) && x.chore !== "costco" && x.chore !== "monthly3" && x.chore !== "drawers" && !(x.chore === "kitchenDeep" && wkDoc.week === "2026-11-09"))
+    w.assignments = w.assignments.filter(x => !(x.chore === "ensuite" && / · helper/.test(x.label || "")) && x.chore !== "costco" && x.chore !== "monthly3" && x.chore !== "drawers" && !(x.chore === "kitchenDeep" && wkDoc.week >= "2026-11-09"))
       .map(x => x.chore === "shop" ? Object.assign({}, x, { label: "Costco" }) : x.chore === "monthly1" ? Object.assign({}, x, { chore: "kitchenDeep", label: "Kitchen deep" }) : x);
     w.assignments = w.assignments.map(x => STD[x.chore] && x.minutes > 0 ? Object.assign({}, x, { minutes: STD[x.chore] }) : x);
     if (!w.assignments.some(x => x.chore === "garbage")) {

@@ -195,9 +195,10 @@
     const mo = settings.monthlyOrder || rules.pool;
     const mPerson = mo[mod(cycle + job, 4)];
     // Kitchen drawers + Stove and oven merged into "Kitchen deep", monthly (Mama, 7 Nov 21:42)
-    const mLabels = ["Kitchen deep", "Common closet", null, "Declutter zone"];
-    const mChore = ["kitchenDeep", "monthly2", null, "monthly4"][job];
-    const mMin = job === 0 ? 90 : B.L;
+    // Kitchen deep merged into Kitchen weekly (Mama, 8 Nov 01:17): the monthly slot 0 is empty now
+    const mLabels = [null, "Common closet", null, "Declutter zone"];
+    const mChore = [null, "monthly2", null, "monthly4"][job];
+    const mMin = B.L;
     const mA = !mChore ? {} : mk({ kind: "monthly", chore: mChore, label: mLabels[job], person: wkAway(mPerson) ? lowest(pool.filter(p => !wkAway(p)), "mo") : mPerson, due: sun, window: "wknd", minutes: mMin });
     if (job === 3 && settings.declutterList && settings.declutterList.length) mA.note = settings.declutterList[mod(cycle, settings.declutterList.length)];
     if (job === 1) mk({ kind: "monthly", chore: "car", label: "Car", person: "Corvin", due: sun, window: "wknd", minutes: B.L, fixed: true });
@@ -262,7 +263,7 @@
     const sameWeekAway = (p) => dates.some(d => isAway(p, d));
     const wkAway = (p) => isAway(p, dates[5]) && isAway(p, dates[6]);
     const ZONES_ = ["bathLight", "entryways", "common"];
-    const POOLJOBS = ["vacuum", "floors", "fridge", "windows", "cubbies", "filters", "kitchenDeep", "monthly2", "monthly4"];
+    const POOLJOBS = ["vacuum", "floors", "fridge", "windows", "cubbies", "filters", "monthly2", "monthly4"];
     const units = [];
     for (const a of list) {
       if (!a.person || a.pin || a.fixed && a.kind !== "laundry") continue;

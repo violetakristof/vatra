@@ -1,6 +1,6 @@
 // Vatra rule pack v1.1 - the household's rules as data. The engine never hardcodes a name.
 window.VATRA_RULES = {
-  version: "1.18",
+  version: "1.19",
   house: "Vatra",
   tz: "America/Toronto",
   epochMonday: "2026-11-09",
@@ -42,7 +42,7 @@ window.VATRA_RULES = {
   std: { cook: 60, souschef: 15, dishes: 30, finisher: 30, arrival: 5, roomReset: 10, garbage: 5, dishPrep: 10, supplements: 10,
     grandparents: 45, wash: 15, fold: 15, deliver: 15, deepBath: 30, ensuite: 30, vacuum: 15, floors: 15, kitchenWeekly: 60,
     fridge: 30, plants: 5, binsOut: 5, binsBack: 5, shop: 120, admin: 60, review: 30, roomDeep: 30, filing: 5, menu: 0,
-    sheets: 20, towels: 20, kitchenDeep: 90, monthly2: 30, monthly4: 30, windows: 30, car: 30, cubbies: 15, filters: 5, roomDeclutter: 30 },
+    sheets: 20, towels: 20, monthly2: 30, monthly4: 30, windows: 30, car: 30, cubbies: 15, filters: 5, roomDeclutter: 30 },
   zoneDayMinutes: 10,
   // own jobs that now count on the ledger at their standard (Maya did more than it showed)
   ownCount: ["arrival", "roomReset", "roomDeep", "filing", "sheets", "roomDeclutter"],
@@ -76,7 +76,7 @@ window.VATRA_RULES = {
     vacuum: "All floors, carpets, both flights of stairs, under things that move.",
     floors: "Hard floors washed: kitchen, bathroom, entryways, then the rest. After vacuum.",
     fridge: "Purge, wipe shelves and door, note what's missing for Friday's shop. Done = photo-ready.",
-    kitchenWeekly: "Cupboard fronts, backsplash, microwave inside, dishwasher clean cycle, drying rack, crumb tray.",
+    kitchenWeekly: "Cupboard fronts, backsplash, microwave inside, dishwasher clean cycle, drying rack, crumb tray. Rotate one extra each week: a drawer, the stove top, the oven, the hood. About an hour; bigger jobs are a holiday project.",
     monthly1: "Kitchen drawers and cupboards: empty, wipe, declutter, reorganize.",
     monthly2: "One common closet (bathroom, coats and shoes, or storage): declutter and reorganize. Improve the system while you're in there.",
     monthly3: "Stove and oven inside, range hood filter, microwave deep clean.",
