@@ -573,7 +573,6 @@
     if (zoneToday(a)) out.push(h("span", { class: "note" }, S.done[k] && S.done[k].covered && S.done[k].person !== effPerson(a) ? "today 🛟 covered by " + ((R.people[S.done[k].person] || {}).label || "") : "today ✓"), h("button", { class: "btn quiet sm", onclick: () => store.deleteDone(k) }, "Undo"));
     else out.push(h("button", { class: "btn", onclick: () => finishDay(a) }, "Done"));
     // "Week done" removed: zones earn 10 min per day ticked (Mama, 7 Nov 21:55)
-    if (!a.carried) out.push(messBtn(a));
     if (isMgr() && !zoneToday(a)) out.push(h("button", { class: "btn quiet sm xbtn", title: "Cancel for today", onclick: () => skipTile(a) }, "✕"));
     return out;
   }
@@ -1521,7 +1520,6 @@
     const out = [];
     if (st === "cancelled") { const sk = S.done[skipId(a)]; if (isMgr() || (sk && sk.defer && sk.person === S.me)) out.push(h("button", { class: "btn quiet sm", onclick: () => unskipTile(a) }, sk && sk.defer ? "Undo skip" : "Restore")); return out; }
     { const lb = linenSkipBtn(a, st); if (lb) out.push(lb); }
-    if (messArea(a) && a.kind !== "zone" && a.date === S.today) out.push(messBtn(a));
     const mineOrBoard = true; // the board is shared; anyone taps for anyone
     if (st === "pending" || st === "overdue") {
       if (hasPomo(a)) out.push(pomoEl(a));
@@ -1740,11 +1738,13 @@
     {
       const a = W.assignments.find(x => x.kind === "arrival" && x.person === S.me && x.date === S.today);
       const on = a && S.done[a.id];
-      main.appendChild(h("div", {}, h("div", { class: "label" }, "When you get home"), h("div", { class: "li " + (on ? "done" : "") }, h("div", {}, h("div", { class: "n" }, on ? "Home · done" : "Arrival"), h("div", { class: "s", style: "color:var(--ink)" }, "Coat and shoes in their places · bag unpacked, papers in the paper box · containers and utensils in the dishwasher · dirty clothes in the basket, clean ones hung or put away")), h("button", { class: "btn " + (on ? "quiet sm" : ""), onclick: () => arrival(S.me) }, on ? "Undo" : "I'm home"))));
+      S._arrivalRow = h("div", { class: "li " + (on ? "done" : ""), style: "margin-top:10px;min-height:44px" }, h("div", {}, h("div", { class: "n", style: "font-size:14px" }, on ? "Home ✓" : "Arrival · tap when home"), h("div", { class: "s" }, "Hold for the steps")), h("button", { class: "btn quiet sm", onclick: () => arrival(S.me) }, on ? "Undo" : "I'm home"));
+      longPress(S._arrivalRow, () => sheet(h("h3", {}, "Arrival"), h("p", {}, R.dod.arrival)));
     }
     const row = (a) => { const st = state(a); const li = h("div", { class: "li " + (a.kind === "zone" && !a.carried && zoneToday(a) && st !== "overdue" ? "done" : st) }, h("div", {}, h("div", { class: "n" }, a.label + (a.carried ? " · from last week" : a.kind === "zone" ? " · every day" : "")), h("div", { class: "s" }, a.kind === "zone" && !a.carried ? zoneDaysTxt(a) : (sub(a, st) || (st === "future" ? "later" : ""))), h("div", { class: "s", style: "color:var(--ink)" }, R.short[a.chore] || "")), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end" }, a.kind === "zone" && !a.carried ? zoneActs(a) : acts(a, st))); fx(li, a); markLate(li, a); longPress(li, () => sheetFor(a)); return li; };
     main.appendChild(h("div", {}, h("div", { class: "label", style: "color:var(--ink)" }, "Today · " + fmtDay(S.today)), h("div", { class: "list" }, ...(() => { const shopRows = (S.me === "Tata" && (shopOpenItems().some(x => isUrg(x)) || W.assignments.some(x => (x.chore === "shop" || x.chore === "costco") && (x.date === S.today || (!x.date && ["Sat", "Sun"].includes(E.dow(S.today)))))) ? [(() => { const open = shopOpenItems(); const li = h("div", { class: "li" + (open.some(x => isUrg(x)) ? " overdue" : "") }, h("div", {}, h("div", { class: "n" }, "🛒 Shopping list"), h("div", { class: "s" }, open.length + " to buy" + (open.some(x => isUrg(x)) ? " · " + open.filter(x => isUrg(x)).length + " urgent" : "") + (open.some(x => x.meal) ? " · " + open.filter(x => x.meal).length + " meal ideas" : ""))), h("button", { class: "btn", onclick: shopSheet }, "Open")); li.addEventListener("click", (e) => { if (e.target.tagName !== "BUTTON") shopSheet(); }); return li; })()] : []); const dr = null, late = false; const openT = todayList.filter(a => rank(a) < 3), doneT = todayList.filter(a => rank(a) >= 3); const rows = openT.map(row).concat(doneT.length ? [foldBox("✓ Done today (" + doneT.length + ")", doneT.map(row), "_doneOpen")] : []); const nLate = todayList.filter(lateOpen).length; // orange jobs above everything, even the 🛒 row (Mama, 5 Nov 22:08)
       return rows.slice(0, nLate).concat(late ? [dr] : [], shopRows, rows.slice(nLate), late || !dr ? [] : [dr]); })())));
+    if (S._arrivalRow) { main.appendChild(S._arrivalRow); S._arrivalRow = null; }
     if (keys.length) main.appendChild(h("div", { style: "margin-top:18px;border-top:1px solid var(--line);padding-top:10px" }, foldBox("Later this week (" + keys.reduce((n, k) => n + byDay[k].length, 0) + ")", keys.map(k => { const list = h("div", { class: "list" }); for (const a of byDay[k]) list.appendChild(row(a)); return h("div", {}, h("div", { class: "label", style: "font-size:11px" }, k === "weekend" || k === "this week" ? k : fmtDay(k)), list); }), "_laterOpen")));
     // away days: small, at the bottom, folded
     const myAway = (S.away[S.me] || []).filter(d => d >= W.week && d <= E.addDays(W.week, 6));
@@ -1936,7 +1936,7 @@
       if (S.done[a.id + ":override"]) kids.push(h("button", { class: "btn quiet sm", onclick: async () => { await store.deleteDone(a.id + ":override"); closeSheet(); } }, "Back to " + R.people[a.person].label));
     }
     kids.push(h("p", {}, R.dod[a.chore] || ""));
-    if (a.kind === "zone" && !a.carried && messArea(a)) { const mb = messBtn(a); if (mb) { mb.className = "btn quiet"; kids.push(mb); } }
+    if (messArea(a) && !a.carried && (a.kind === "zone" || a.date === S.today)) { const mb = messBtn(a); if (mb) { mb.className = "btn quiet"; kids.push(mb); } }
     if (isMgr() && !a.ask && a.chore) kids.push(h("button", { class: "btn quiet sm", onclick: () => textSheet(a) }, "✎ Edit description"));
     { const zoneDone = a.kind === "zone" && !a.carried && S.done[dayId(a)]; if (st !== "done" && st !== "cancelled" && !zoneDone && !skipped(a)) { const cb = coverBtn(a, true); if (cb) kids.push(cb, h("p", { class: "note" }, "Covered = you did it because it had to be done. The minutes go to you; for " + ((R.people[effPerson(a)] || {}).label || "them") + " it counts as not done tonight.")); } }
     if (!isBoard() && effPerson(a) === S.me && swapOpen(a) && R.pool.includes(S.me)) kids.push(h("button", { class: "btn ghost", onclick: () => swapSheet(a) }, "Ask someone to swap"));
