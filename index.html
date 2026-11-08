@@ -16,9 +16,13 @@
   button { font: inherit; cursor: pointer; color: inherit; }
   .pick button, .chip { color: var(--ink); }
   .app { min-height:100vh; display:flex; flex-direction:column; }
-  .top { min-height:64px; padding-top:8px; padding-bottom:8px; padding:0 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); gap:12px; }
-  .brand { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; row-gap:6px; }
-  .topbtns { display:flex; gap:6px; flex-wrap:wrap; align-self:center; }
+  .top { padding:10px 20px 10px; display:grid; grid-template-columns:1fr auto; grid-template-areas:"brand tabs" "btns chips"; align-items:center; row-gap:10px; column-gap:16px; border-bottom:1px solid var(--line); }
+  .brand { grid-area:brand; display:flex; align-items:baseline; gap:12px; min-width:0; white-space:nowrap; }
+  .top .tabs { grid-area:tabs; justify-self:end; }
+  .topbtns { grid-area:btns; display:flex; gap:6px; flex-wrap:nowrap; align-items:center; }
+  .top .chips { grid-area:chips; justify-self:end; }
+  .chip .fire { font-weight:600; color:var(--mute); font-size:13px; }
+  .chip.hit { background:#F8BBD0; border-color:#F8BBD0; color:#5A1030; }
   .zoombtn { align-self:center; min-height:36px; padding:0 12px; border-radius:999px; border:1.5px solid var(--ink); background:var(--card); color:var(--ink); font-weight:700; font-size:15px; white-space:nowrap; touch-action:manipulation; }
   .mepill { align-self:center; min-height:36px; padding:0 14px; border-radius:999px; border:none; background:var(--ink); color:#fff; font-weight:700; font-size:15px; white-space:nowrap; touch-action:manipulation; }
   .brand b { font-size:24px; letter-spacing:.02em; }
@@ -26,7 +30,7 @@
   .tabs { display:flex; gap:4px; background:var(--soft); padding:4px; border-radius:999px; max-width:100%; box-sizing:border-box; overflow-x:auto; scrollbar-width:none; }
   .tabs button { border:0; background:transparent; color:var(--mute); padding:8px 14px; border-radius:999px; font-weight:600; font-size:14px; min-height:40px; }
   .tabs button.on { background:var(--ink); color:#fff; }
-  .chips { display:flex; gap:6px; flex-wrap:wrap; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
   .chip { display:flex; align-items:center; gap:7px; padding:6px 12px; border-radius:999px; background:var(--card); border:1px solid var(--line); min-height:40px; font-weight:600; font-size:14px; }
   .chip i { width:11px; height:11px; border-radius:50%; background:var(--soft2); display:inline-block; }
   .chip.on i { background:var(--green); }
@@ -109,8 +113,11 @@
   .who { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:28px; max-width:520px; width:100%; display:flex; flex-direction:column; gap:14px; }
   .who h2 { margin:0; }
   @media (max-width: 760px) {
-    .top { height:auto; padding:12px 14px; flex-wrap:wrap; }
-    .chips { order:3; width:100%; }
+    .top { padding:10px 14px; grid-template-columns:1fr; grid-template-areas:"brand" "btns" "tabs" "chips"; row-gap:8px; }
+    .top .tabs { justify-self:stretch; }
+    .top .chips { justify-self:stretch; justify-content:flex-start; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
+    .brand { white-space:normal; }
+    .top .chip { flex:0 0 auto; }
     .main { padding:14px; }
     .row { flex-direction:column; gap:10px; }
     .arrow { display:none; }
@@ -932,7 +939,8 @@
           h("div", { class: "s" }, x.st === "done" ? (x.cover ? "🛟 covered by " + ((R.people[x.cover] || {}).label || x.cover) + " · " : "") + (x.at ? hm(x.at) : "done") + (x.late ? " · late" : "") : x.st === "cancelled" ? "cancelled" : "not done yet")),
         // Mama can cancel or restore right here (7 Nov 21:09: "why can't I cancel his Inbox to Library")
         isMgr() && x.st === "open" ? h("span", { style: "display:inline-flex;gap:4px" }, h("button", { class: "btn quiet sm", title: "Someone covered it", onclick: () => pickWho(R.order.filter(q => q !== p), "Who covered " + R.people[p].label + "'s " + x.label + "?", async (q) => { await coverTile(x.a, q); daySheet(p); }) }, "🛟"), h("button", { class: "btn quiet sm xbtn", title: "Cancel for today", onclick: async () => { await skipTile(x.a); daySheet(p); } }, "✕"))
-          : isMgr() && x.st === "cancelled" ? h("button", { class: "btn quiet sm", onclick: async () => { await unskipTile(x.a); daySheet(p); } }, "Restore") : null))) : h("p", { class: "note" }, "Nothing due today."));
+          : isMgr() && x.st === "cancelled" ? h("button", { class: "btn quiet sm", onclick: async () => { await unskipTile(x.a); daySheet(p); } }, "Restore") : null))) : h("p", { class: "note" }, "Nothing due today."),
+      h("div", { class: "label", style: "margin-top:12px" }, "Arrival · when you get home"), h("p", { class: "note" }, R.dod.arrival));
   }
   function streakRow() { return h("div", { class: "streaks" }, R.order.map(p => { const n = streakOf(p), r = nightOf(p, S.today), ok = r === "hit" || (r === null && freeNight(p, S.today)); return h("span", { class: "chip" + (ok ? " hit" : ""), style: "cursor:pointer", onclick: () => daySheet(p) }, R.people[p].label + " " + (n ? "🔥" + n : "·") + (ok ? " ✨" : "")); })); }
   function rewardPicker(week) {
@@ -1403,12 +1411,14 @@
       const a = V() && V().assignments.find(x => x.kind === "arrival" && x.person === p && x.date === S.today);
       const on = a && S.done[a.id];
       const aw = (S.away[p] || []).includes(S.today);
-      return h("button", { class: "chip" + (on ? " on" : "") + (aw ? " off" : "") + (p === S.me ? " me" : ""), onclick: () => arrival(p), title: "Tap when home and bag unpacked" }, h("i"), R.people[p].label + (aw ? " · away" : on ? " · home" : ""));
+      const n = S.week ? streakOf(p) : 0, r = S.week ? nightOf(p, S.today) : null, hit = r === "hit" || (r === null && S.week && freeNight(p, S.today));
+      const c = h("button", { class: "chip" + (on ? " on" : "") + (aw ? " off" : "") + (p === S.me ? " me" : "") + (hit ? " hit" : ""), onclick: () => arrival(p), title: "Tap when home · hold for today's jobs" }, h("i"), R.people[p].label + (aw ? " · away" : ""), n ? h("span", { class: "fire" }, "🔥" + n) : null, hit ? h("span", {}, "✨") : null);
+      longPress(c, () => daySheet(p)); return c;
     }));
     const tabList = isBoard() ? [["tonight", "Tonight"], ["week", "This week"], ["sunday", "Weekly review"]] : [["mine", "Mine"], ["tonight", "Tonight"], ["week", "This week"], ["sunday", "Weekly review"]];
     const tabs = h("div", { class: "tabs" }, tabList.map(([k, l]) => h("button", { class: S.tab === k ? "on" : "", onclick: () => { S.tab = k; render(); } }, l)));
-    const chipBlock = h("div", { style: "display:flex;flex-direction:column;gap:4px" }, chips, h("div", { style: "font-size:11px;color:var(--mute)" }, "Green = home."));
-    return h("div", { class: "top" }, h("div", { class: "brand" }, h("b", {}, "Vatra"), h("span", {}, fmtDay(S.today) + " · " + nowHM()), h("div", { class: "topbtns" }, S.me ? (() => { const sw = () => { localStorage.removeItem("vatra.me"); S.me = null; render(); }; const b = h("button", { class: "mepill", title: isBoard() ? "Hold to change this device" : "Switch person", onclick: isBoard() ? null : sw }, "👤 " + ((R.people[S.me] || {}).label || S.me) + (isBoard() ? "" : " · switch")); if (isBoard()) longPress(b, sw); return b; })() : null, h("button", { class: "btn quiet sm", style: "align-self:center", onclick: askSheet }, "🙋 Ask"), (() => { const u = shopOpenItems().filter(x => isUrg(x)).length; return h("button", { class: "btn quiet sm" + (u ? " shopurg" : ""), style: "align-self:center", onclick: shopSheet }, u ? "🛒 Shop " + u + "!" : "🛒 Shop"); })(), h("button", { class: "btn quiet sm", style: "align-self:center", title: "More", onclick: moreSheet }, "⋯"))), (S.tab === "tonight" || S.tab === "sunday") ? h("div") : chipBlock, tabs);
+    const chipBlock = chips;
+    return h("div", { class: "top" }, h("div", { class: "brand" }, h("b", {}, "Vatra"), h("span", {}, fmtDay(S.today) + " · " + nowHM())), h("div", { class: "topbtns" }, S.me ? (() => { const sw = () => { localStorage.removeItem("vatra.me"); S.me = null; render(); }; const b = h("button", { class: "mepill", title: isBoard() ? "Hold to change this device" : "Switch person", onclick: isBoard() ? null : sw }, "👤 " + ((R.people[S.me] || {}).label || S.me) + (isBoard() ? "" : " · switch")); if (isBoard()) longPress(b, sw); return b; })() : null, h("button", { class: "btn quiet sm", style: "align-self:center", onclick: askSheet }, "🙋 Ask"), (() => { const u = shopOpenItems().filter(x => isUrg(x)).length; return h("button", { class: "btn quiet sm" + (u ? " shopurg" : ""), style: "align-self:center", onclick: shopSheet }, u ? "🛒 Shop " + u + "!" : "🛒 Shop"); })(), h("button", { class: "btn quiet sm", style: "align-self:center", title: "More", onclick: moreSheet }, "⋯")), chipBlock, tabs);
   }
 
   // ⋯ in the top bar: text size, rewards, ideas (Mama, 7 Nov 21:15: fewer top buttons)
@@ -1577,16 +1587,10 @@
   function boardView(main) {
     const W = V(), d = S.today;
     { const hn = houseNight(d); if (hn.hit) { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "House done before 10 🎉", h("div", { style: "font-size:14px;font-weight:500" }, "Everyone finished on time tonight."))); confetti("house:" + d); }
-      else main.appendChild(h("div", {}, h("div", { class: "label" }, "Before 10 pm · 🔥 streaks"), streakRow()));
       const nb = nineBanner(); if (nb) main.appendChild(nb); }
     const sec = (label, node) => { const s = h("div", {}); s.appendChild(h("div", { class: "label" }, label)); s.appendChild(node); return s; };
     { const sc = swapCards(); if (sc) main.appendChild(sec("Swap requests", sc)); }
     { const late = lateList().map(a => (R.people[effPerson(a)] || {}).label + " · " + a.label); if (late.length) main.appendChild(h("div", { class: "latebar" }, h("b", {}, isLate() ? "After 10 pm · still open: " : "Still open: "), late.join(", "), h("div", { style: "font-size:12px;opacity:.9;margin-top:2px" }, "Orange tiles still count for " + fmtDay(d).replace(/,.*/, "") + " until 6 am."))); }
-    // arrival row
-    main.appendChild(h("div", { class: "tile", style: "flex-direction:row;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px" },
-      h("div", { class: "k", style: "flex:0 0 auto" }, "Home?"),
-      h("div", { style: "display:flex;gap:6px;flex-wrap:wrap" }, R.order.map(p => { const a = W.assignments.find(x => x.kind === "arrival" && x.person === p && x.date === d); const on = a && S.done[a.id];
-        return h("button", { class: "btn sm " + (on ? "" : "ghost"), style: on ? "background:var(--green);border-color:var(--green)" : "", onclick: () => arrival(p) }, R.people[p].label + (on ? " ✓" : "")); }))));
     // 1. zones
     const zones = W.assignments.filter(a => a.kind === "zone");
     main.appendChild(sec("Zones this week", h("div", { class: "bzones" }, zones.map(a => {
@@ -1624,7 +1628,8 @@
     // 3. everything else as chips; done ones fade out after an hour
     const chips = h("div", { class: "bchips" }), doneChips = h("div", { class: "bchips" });
     const fresh = (a) => { const dd = S.done[a.id]; return !dd || !dd.at || Date.now() - new Date(dd.at) < 3600000; };
-    const todays = W.assignments.filter(a => (a.kind === "fixed" || (a.kind === "laundry" && !a.own)) && a.date === d && a !== gb);
+    const isWk = ["Sat", "Sun"].includes(E.dow(d));
+    const todays = W.assignments.filter(a => !["evening", "zone", "arrival", "streak"].includes(a.kind) && !a.own && a !== gb && a.chore !== "dishPrep" && (a.date === d || (!a.date && a.window === "wknd" && isWk) || (!a.date && a.window === "week" && E.dow(d) === "Sun")));
     for (const a of todays) {
       const st = state(a); const folded = (st === "done" && !fresh(a)) || st === "cancelled";
       const un = a.unassigned && !S.done[a.id + ":override"];
@@ -1747,8 +1752,7 @@
     {
       const a = W.assignments.find(x => x.kind === "arrival" && x.person === S.me && x.date === S.today);
       const on = a && S.done[a.id];
-      S._arrivalRow = h("div", { class: "li " + (on ? "done" : ""), style: "margin-top:10px;min-height:44px" }, h("div", {}, h("div", { class: "n", style: "font-size:14px" }, on ? "Home ✓" : "Arrival · tap when home"), h("div", { class: "s" }, "Hold for the steps")), h("button", { class: "btn quiet sm", onclick: () => arrival(S.me) }, on ? "Undo" : "I'm home"));
-      longPress(S._arrivalRow, () => sheet(h("h3", {}, "Arrival"), h("p", {}, R.dod.arrival)));
+      S._arrivalRow = null; // the top chip is the home button (Mama, 8 Nov 01:09)
     }
     const row = (a) => { if (a._zoneDay) { const li = h("div", { class: "li future" }, h("div", {}, h("div", { class: "n" }, a.label + " · every day"), h("div", { class: "s" }, R.short[a.chore] || ""))); fx(li, a); return li; } const st = state(a); const li = h("div", { class: "li " + (a.kind === "zone" && !a.carried && zoneToday(a) && st !== "overdue" ? "done" : st) }, h("div", {}, h("div", { class: "n" }, a.label + (a.carried ? " · from last week" : a.kind === "zone" ? " · every day" : "")), h("div", { class: "s" }, a.kind === "zone" && !a.carried ? zoneDaysTxt(a) : (sub(a, st) || (st === "future" ? "later" : ""))), h("div", { class: "s", style: "color:var(--ink)" }, R.short[a.chore] || "")), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end" }, a.kind === "zone" && !a.carried ? zoneActs(a) : acts(a, st))); fx(li, a); markLate(li, a, true); longPress(li, () => sheetFor(a)); return li; };
     main.appendChild(h("div", {}, h("div", { class: "label", style: "color:var(--ink)" }, "Today · " + fmtDay(S.today)), h("div", { class: "list" }, ...(() => { const shopRows = (S.me === "Tata" && (shopOpenItems().some(x => isUrg(x)) || W.assignments.some(x => (x.chore === "shop" || x.chore === "costco") && (x.date === S.today || (!x.date && ["Sat", "Sun"].includes(E.dow(S.today)))))) ? [(() => { const open = shopOpenItems(); const li = h("div", { class: "li" + (open.some(x => isUrg(x)) ? " overdue" : "") }, h("div", {}, h("div", { class: "n" }, "🛒 Shopping list"), h("div", { class: "s" }, open.length + " to buy" + (open.some(x => isUrg(x)) ? " · " + open.filter(x => isUrg(x)).length + " urgent" : "") + (open.some(x => x.meal) ? " · " + open.filter(x => x.meal).length + " meal ideas" : ""))), h("button", { class: "btn", onclick: shopSheet }, "Open")); li.addEventListener("click", (e) => { if (e.target.tagName !== "BUTTON") shopSheet(); }); return li; })()] : []); const dr = null, late = false; const openT = todayList.filter(a => rank(a) < 3), doneT = todayList.filter(a => rank(a) >= 3); const rows = openT.map(row).concat(doneT.length ? [foldBox("✓ Done today (" + doneT.length + ")", doneT.map(row), "_doneOpen")] : []); const nLate = todayList.filter(lateOpen).length; // orange jobs above everything, even the 🛒 row (Mama, 5 Nov 22:08)
