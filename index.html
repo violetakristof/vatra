@@ -340,9 +340,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794155557"></script>
-<script src="./engine.js?v=1794155557"></script>
-<script>window.VATRA_BUILD="1794155557";</script>
+<script src="./rules.js?v=1794155662"></script>
+<script src="./engine.js?v=1794155662"></script>
+<script>window.VATRA_BUILD="1794155662";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -2074,6 +2074,14 @@
     // requests
     { const wk = S.asks.filter(x => !x.gift && E.mondayOf(x.askedOn || x.date) === W.week).sort((a, b) => (a.at < b.at ? -1 : 1));
       if (wk.length) main.appendChild(sec("Requests (🙋 Ask)", h("div", { class: "list" }, wk.map(x => (x.from === S.me || S.me === "Mama") && !isBoard() ? askRow(x, true) : h("div", { class: "li" + (x.status === "declined" ? " overdue" : x.status === "done" ? " done" : "") }, h("div", {}, h("div", { class: "n" }, x.text), h("div", { class: "s" }, (R.people[x.from] || {}).label + " → " + (R.people[x.to] || {}).label + " · " + ASK_ST[x.status] + " · ~" + x.minutes + " min"))))))); }
+    // 💵 kids' own money this week: totals per kid, items, paid back (Mama, 8 Nov 11:32)
+    { const days = wkDates(W.week), own = S.shop.filter(x => !x.deleted && x.status === "bought" && x.extra && x.boughtBy && days.includes(x.boughtDate) && SHOP_KIDS.includes(x.boughtBy));
+      if (own.length) { const rows = SHOP_KIDS.filter(k => own.some(x => x.boughtBy === k)).map(k => { const xs = own.filter(x => x.boughtBy === k), tot = xs.reduce((t, x) => t + (x.amount || 0), 0), paid = xs.every(x => x.paidBack);
+          return h("div", { class: "li" + (paid ? " done" : "") }, h("div", {}, h("div", { class: "n" }, (R.people[k] || { label: k }).label + " · $" + tot.toFixed(2) + (paid ? " · paid back" : " · to pay back")),
+            h("div", { class: "s" }, xs.map(x => x.text + (x.amount != null ? " $" + Number(x.amount).toFixed(2) : "") + (x.where ? " (" + x.where + ")" : "")).join(" · "))),
+            S.me === "Mama" ? h("button", { class: "btn " + (paid ? "quiet " : "") + "sm", onclick: async () => { for (const x of xs) await store.writeShop(Object.assign({}, x, { paidBack: !paid, paidBackOn: paid ? null : S.today })); render(); } }, paid ? "Undo" : "Paid back") : null); });
+        const grand = own.reduce((t, x) => t + (x.amount || 0), 0);
+        main.appendChild(sec("💵 Bought with their own money · $" + grand.toFixed(2), h("div", { class: "list" }, rows))); } }
     // urgent runs
     { const ur = S.shop.filter(x => x.status === "bought" && x.boughtBy && E.mondayOf(x.boughtDate) === W.week && runCounts(runOf(x)));
       if (ur.length) { const by = {}; for (const x of ur) { const b = by[x.boughtBy] || (by[x.boughtBy] = { n: 0, runs: {}, amt: 0, has: false }); b.n++; b.runs[x.boughtDate] = 1; if (x.amount != null) { b.amt += x.amount; b.has = true; } }
