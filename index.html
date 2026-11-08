@@ -198,7 +198,7 @@
   .shoprow.done > .stxt { text-decoration:line-through; color:var(--mute); font-weight:500; }
   .shoprow > .more { flex:0 0 auto; border:none; background:none; font-size:20px; color:var(--mute); padding:0 4px; }
   .shopedit { display:flex; gap:6px; flex-wrap:wrap; padding:6px 4px 2px 40px; }
-  .daypick { display:grid; grid-template-columns:repeat(8, minmax(0,1fr)); gap:4px; margin-bottom:10px; }
+  .daypick { display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:4px; margin-bottom:10px; }
   .daypick button { border:1.5px solid var(--line); background:var(--card); border-radius:10px; padding:6px 0; display:flex; flex-direction:column; align-items:center; font-size:12px; color:var(--ink); }
   .daypick button b { font-size:13px; } .daypick button.today { border-color:var(--ink); } .daypick button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
   .daylist { display:flex; flex-direction:column; gap:8px; }
@@ -312,9 +312,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794124200"></script>
-<script src="./engine.js?v=1794124200"></script>
-<script>window.VATRA_BUILD="1794124200";</script>
+<script src="./rules.js?v=1794124591"></script>
+<script src="./engine.js?v=1794124591"></script>
+<script>window.VATRA_BUILD="1794124591";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -2062,8 +2062,9 @@
     { g.appendChild(h("div", { style: "padding:6px;font-weight:700;color:var(--mute);border-top:1px solid var(--soft)" }, "Zones"));
       for (const p of cols) { const cell = h("div", { style: "padding:5px;border-left:1px solid var(--soft);border-top:1px solid var(--soft);display:flex;flex-direction:column;gap:3px;min-width:0" });
         for (const a of W.assignments.filter(a => a.kind === "zone" && effPerson(a) === p)) cell.appendChild(tileEl(a)); g.appendChild(cell); } }
-    const rows = wkDates(W.week).map(dt => [E.dow(dt), dt]).concat([["Wknd", "wknd"]]);
-    const cellItems = (p, date) => W.assignments.filter(a => effPerson(a) === p && a.kind !== "arrival" && a.kind !== "streak" && a.chore !== "putaway" && a.chore !== "roomReset" && !a.bathDay && a.kind !== "zone" && (!a.auto || a.chore === "cook") && (date === "wknd" ? (!a.date && a.window === "wknd") : (a.date === date || (!a.date && a.window === "week" && a.due === date))));
+    const rows = wkDates(W.week).map(dt => [E.dow(dt), dt]); // no Wknd row: weekend and week-long jobs sit on their due day (Mama, 8 Nov 02:55)
+    const lastDay = rows[rows.length - 1][1];
+    const cellItems = (p, date) => W.assignments.filter(a => effPerson(a) === p && a.kind !== "arrival" && a.kind !== "streak" && a.chore !== "putaway" && a.chore !== "roomReset" && !a.bathDay && a.kind !== "zone" && (!a.auto || a.chore === "cook") && (a.date === date || (!a.date && (a.due === date || (!a.due && date === lastDay)))));
     // phones: one day at a time, full names (Mama, 8 Nov 02:48 "too cramped")
     if (window.innerWidth < 700 && !isBoard()) {
       const keys = rows.map(r => r[1]); if (!keys.includes(S._wkDay)) S._wkDay = keys.includes(S.today) ? S.today : keys[0];
