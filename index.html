@@ -132,6 +132,7 @@
   @media (max-width: 760px) {
     .top { padding:10px 12px; gap:8px; }
     .brand b { font-size:20px; } .brand span { font-size:13px; }
+    .toprow { gap:8px; } .topbtns { gap:5px; } .ibtn.lbl { padding:0 8px; font-size:13px; } .mepill { padding:0 10px; font-size:14px; } .brand { flex:0 0 auto; }
     .dlong, .dshort { display:none !important; }
     .people { gap:5px; }
     .person { padding:6px 4px; min-height:46px; border-radius:12px; align-items:center; text-align:center; }
@@ -289,9 +290,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794120667"></script>
-<script src="./engine.js?v=1794120667"></script>
-<script>window.VATRA_BUILD="1794120667";</script>
+<script src="./rules.js?v=1794120878"></script>
+<script src="./engine.js?v=1794120878"></script>
+<script>window.VATRA_BUILD="1794120878";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -317,7 +318,8 @@
   // per-device text size (Norbert, 7 Nov): Aa button cycles 100 / 115 / 130 / 150 %
   // Digital 15 removed from Vatra (Mama, 8 Nov 00:32); the old done docs stay, off the ledger
   const ZOOMS = [1, 1.15, 1.3, 1.5];
-  const zoomNow = () => { let z = 1; try { z = parseFloat(localStorage.getItem("vatra.zoom")) || 1; } catch (e) {} return ZOOMS.includes(z) ? z : 1; };
+  const TEXT_SIZE = { Tata: 1.3 }; // bigger text on Norbert's phone, no button needed (Mama, 8 Nov 01:51)
+  const zoomNow = () => { if (S.me && TEXT_SIZE[S.me] && S.me !== "Board") return TEXT_SIZE[S.me]; let z = 1; try { z = parseFloat(localStorage.getItem("vatra.zoom")) || 1; } catch (e) {} return ZOOMS.includes(z) ? z : 1; };
   const applyText = () => { const st = S.settings || {}; R.dod = Object.assign({}, ORIG_DOD, st.dod || {}); R.short = Object.assign({}, ORIG_SHORT, st.short || {}); };
   const $ = (s) => document.querySelector(s);
   const h = (tag, attrs, ...kids) => {
@@ -1434,10 +1436,10 @@
     const app = $("#app"); app.innerHTML = ""; document.body.classList.remove("pinkday");
     document.body.classList.toggle("board", isBoard());
     applyText();
-    { const z = zoomNow(); $("#app").style.zoom = z === 1 ? "" : z; $("#sheet").style.zoom = z === 1 ? "" : z; }
+    const ZM = zoomNow(); $("#app").style.zoom = ""; $("#sheet").style.zoom = ZM === 1 ? "" : ZM; // the top bar stays normal size so it fits; the content below is enlarged
     if (!S.me) { app.appendChild(whoScreen()); return; }
     app.appendChild(topbar());
-    const body = h("div", { class: "body" });
+    const body = h("div", { class: "body" }); if (ZM !== 1) body.style.zoom = ZM;
     const main = h("div", { class: "main" });
     if (S.dbState === "none") main.appendChild(h("div", { class: "banner" }, "Not connected to the shared board: check the internet, then reopen Vatra. Working locally for now."));
     if (!S.week) main.appendChild(h("div", { class: "note" }, "Loading this week…"));
@@ -1479,8 +1481,8 @@
     const u = shopOpenItems().filter(x => isUrg(x)).length;
     const acts = h("div", { class: "topbtns" }, me,
       h("button", { class: "ibtn lbl", title: "Ask", onclick: askSheet }, "🙋 Ask"),
-      h("button", { class: "ibtn lbl" + (u ? " shopurg" : ""), title: "Shopping list", onclick: shopSheet }, u ? "🛒 Shop " + u + "!" : "🛒 Shop"),
-      h("button", { class: "ibtn", title: "More", onclick: moreSheet }, "⋯"));
+      h("button", { class: "ibtn lbl" + (u ? " shopurg" : ""), title: "Shopping list", onclick: shopSheet }, u ? "🛒 Shop " + u + "!" : "🛒 Shop"));
+    // ⋯ menu removed (Mama, 8 Nov 01:51): no Ideas / Rewards / Import on screen; text size is set per person (TEXT_SIZE)
     return h("div", { class: "top" },
       h("div", { class: "toprow" }, h("div", { class: "brand" }, h("b", {}, "Vatra"), h("span", { class: "dlong" }, fmtDay(S.today).replace(/, \d{4}$/, "") + " · " + nowHM()), h("span", { class: "dshort" }, new Date(S.today + "T12:00").toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" }))), acts),
       tabs, people);
