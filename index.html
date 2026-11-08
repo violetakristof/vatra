@@ -225,6 +225,8 @@
   @media (max-width:700px) { .menustrip { grid-template-columns:none; grid-auto-flow:column; grid-auto-columns:96px; overflow-x:auto; padding-bottom:4px; } }
   .mealline { font-size:17px; font-weight:700; color:var(--ink); margin:2px 0 4px; line-height:1.25; }
   .bstep .mealline { font-size:15px; }
+  .mealpick { margin:0 0 6px; } .mealpick .shopadd { margin-top:10px; }
+  .pickrow { display:flex; align-items:center; gap:10px; padding:10px 12px; } .pickrow .n { flex:1 1 auto; min-width:0; font-size:16px; font-weight:600; line-height:1.3; text-align:left; } .pickrow .btn { flex:0 0 auto; }
   .mealline.todo { font-size:14px; font-weight:600; color:var(--amberink); }
   .mealset:not(.done) { background:var(--warm2) !important; border-color:var(--amber) !important; }
   .mealnow { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px 14px; border-radius:14px; background:var(--soft); margin-bottom:10px; }
@@ -335,9 +337,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794154821"></script>
-<script src="./engine.js?v=1794154821"></script>
-<script>window.VATRA_BUILD="1794154821";</script>
+<script src="./rules.js?v=1794155046"></script>
+<script src="./engine.js?v=1794155046"></script>
+<script>window.VATRA_BUILD="1794155046";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1189,7 +1191,7 @@
     const W = V(), days = []; for (let i = 0; i < 7; i++) days.push(E.addDays(S.today, i));
     const strip = h("div", { class: "menustrip" }, days.map(d => { const m = mealFor(d); return h("div", { class: "mday" + (d === S.today ? " today" : "") + (S._mealPick === d ? " on" : ""), onclick: () => { if (!canPlan()) return; S._mealPick = S._mealPick === d ? null : d; refreshShopSheet(); } }, h("div", { class: "k" }, dayChip(d)), h("div", { class: "n" }, m ? m.text : "-")); }));
     const ideas = mealsAll().filter(x => !x.mealDate), cooked = mealsAll().filter(x => x.mealDate && x.mealDate < S.today).sort((a, b) => b.mealDate.localeCompare(a.mealDate));
-    const pickBox = S._mealPick && canPlan() ? h("div", { class: "shopedit" }, h("div", { class: "s" }, "Pick for " + dayChip(S._mealPick) + ":"), h("div", { class: "pick" }, ideas.concat(cooked).map(x => h("button", { onclick: () => { const d = S._mealPick; S._mealPick = null; planMeal(x, d); } }, x.text))), mealFor(S._mealPick) ? h("button", { class: "btn quiet sm", onclick: () => { const d = S._mealPick; S._mealPick = null; planMeal(mealFor(d), null); } }, "Clear this day") : null) : null;
+    const pickBox = S._mealPick && canPlan() ? h("div", { class: "mealpick" }, h("div", { class: "s", style: "margin:6px 0" }, "Pick for " + dayChip(S._mealPick) + ":"), h("div", { class: "list" }, ideas.concat(cooked).map(x => h("div", { class: "li pickrow" }, h("div", { class: "n" }, x.text), h("button", { class: "btn sm", onclick: () => { const d = S._mealPick; S._mealPick = null; planMeal(x, d); } }, "Pick")))), mealFor(S._mealPick) ? h("button", { class: "btn quiet sm", onclick: () => { const d = S._mealPick; S._mealPick = null; planMeal(mealFor(d), null); } }, "Clear this day") : null) : null;
     const sec = (t, xs) => xs.length ? h("div", { class: "shopsec" }, h("div", { class: "label" }, h("span", {}, t), h("span", {}, String(xs.length))), h("div", { class: "list" }, xs.map(mealRow))) : null;
     return h("div", {}, h("div", { class: "label" }, "This week's menu" + (canPlan() ? " · tap a day to pick" : "")), strip, pickBox,
       h("div", { class: "label", style: "margin-top:14px" }, "Ideas"), addRow("Add a meal idea", (t, p) => addMealIdea(t, p).then(() => refreshShopSheet())),
@@ -1242,8 +1244,8 @@
     sheet(h("h3", {}, "Chef · " + dayChip(d) + " · " + ((R.people[effPerson(a)] || {}).label || "")),
       h("div", { class: "mealnow" }, h("div", {}, h("div", { class: "k" }, "🍲 " + (d === S.today ? "Tonight's" : dayChip(d) + "'s") + " meal"), h("div", { class: "n" }, m ? m.text : "Not picked yet")),
         m && canPlan() ? h("button", { class: "btn quiet sm", onclick: () => { S._mealChange = !S._mealChange; refreshShopSheet(); } }, S._mealChange ? "Keep" : "Change") : null),
-      picking && canPlan() ? h("div", { class: "shopedit" },
-        ideas.length ? h("div", { class: "pick" }, ideas.map(x => h("button", { onclick: () => pick(x) }, x.text))) : null,
+      picking && canPlan() ? h("div", { class: "mealpick" },
+        ideas.length ? h("div", { class: "list" }, ideas.map(x => h("div", { class: "li pickrow" }, h("div", { class: "n" }, x.text), h("button", { class: "btn sm", onclick: () => pick(x) }, "Pick")))) : null,
         addRow("New meal idea", (t, p) => addMealIdea(t, p).then(x => pick(x))),
         m ? h("button", { class: "btn quiet sm", style: "margin-top:8px", onclick: () => { S._mealChange = false; planMeal(m, null); } }, "✕ No meal picked") : null) : null,
       h("div", { class: "label", style: "margin-top:16px;display:flex;justify-content:space-between" }, h("span", {}, "🛒 Shopping list"), h("span", {}, String(open.length))),
