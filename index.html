@@ -312,9 +312,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794124591"></script>
-<script src="./engine.js?v=1794124591"></script>
-<script>window.VATRA_BUILD="1794124591";</script>
+<script src="./rules.js?v=1794124797"></script>
+<script src="./engine.js?v=1794124797"></script>
+<script>window.VATRA_BUILD="1794124797";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -379,7 +379,7 @@
   const SUN_WEEKS = "2026-11-16"; // generated weeks from here move their own Sunday to the start
   const FIRST_SUN = "2026-11-09"; // the 9 Nov week already starts Sunday 8: same assignments, today's Sunday jobs join it (Mama, 8 Nov 02:47)
   const wkStart = (wk) => wk >= FIRST_SUN ? E.addDays(wk, -1) : wk;
-  const wkDates = (wk) => [0, 1, 2, 3, 4, 5, 6].map(i => E.addDays(wkStart(wk), i));
+  const wkDates = (wk) => (wk === "2026-11-02" ? [0, 1, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5, 6]).map(i => E.addDays(wkStart(wk), i)); /* the 2 Nov week ends Sat 7: its Sunday 8 jobs moved to the 9 Nov week */
   const monday = () => E.mondayOf(S.today >= E.addDays(FIRST_SUN, -1) ? E.addDays(S.today, 1) : S.today);
   const SUN8 = "2026-11-08"; let _sun8 = [];
 
