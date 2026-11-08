@@ -145,7 +145,9 @@
     .main { padding:14px; }
     .row { flex-direction:column; gap:10px; }
     .arrow { display:none; }
-    .grid3, .grid4 { grid-template-columns:1fr 1fr; }
+    .grid3 { grid-template-columns:minmax(0,1fr); } .grid4 { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .zone { flex-direction:column; align-items:stretch; } .zone > div:first-child { min-width:0; }
+    .zone > .s, .zone > .acts { display:inline-flex; } .zone { display:grid; grid-template-columns:1fr auto; } .zone > div:first-child { grid-column:1 / -1; }
     .redcol { display:none; }
     .body { flex-direction:column; }
     .redrow { display:flex; }
@@ -302,9 +304,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794123279"></script>
-<script src="./engine.js?v=1794123279"></script>
-<script>window.VATRA_BUILD="1794123279";</script>
+<script src="./rules.js?v=1794123380"></script>
+<script src="./engine.js?v=1794123380"></script>
+<script>window.VATRA_BUILD="1794123380";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1784,12 +1786,12 @@
     longPress(arrTile, () => sheet(h("h3", {}, "Arrival"), h("p", {}, R.dod.arrival)));
     { const sc = swapCards(); if (sc) main.appendChild(sec("Swap requests", sc)); }
     { const late = lateList().map(a => (R.people[effPerson(a)] || {}).label + " · " + a.label); if (late.length) main.appendChild(h("div", { class: "latebar" }, h("b", {}, isLate() ? "After 10 pm · still open: " : "Still open: "), late.join(", "), h("div", { style: "font-size:12px;opacity:.9;margin-top:2px" }, "Orange tiles still count for " + fmtDay(S.today).replace(/,.*/, "") + " until 6 am."))); }
-    main.appendChild(sec("First, when you get home", arrTile));
+    // no Arrival block: the name tiles at the top already mark who is home (Mama, 8 Nov 02:35)
     main.appendChild(sec("Tonight", row));
     if (isMgr()) { const evs = W.assignments.filter(x => x.kind === "evening" && x.date === d && ["cook", "souschef", "dishes", "finisher"].includes(x.role));
       const allOff = evs.length && evs.every(x => S.done[x.id + ":skip"] || S.done[x.id]);
       main.appendChild(h("div", { style: "margin:-6px 0 10px" }, allOff && evs.some(x => S.done[x.id + ":skip"]) ? h("button", { class: "btn quiet sm", onclick: async () => { for (const x of evs) if (S.done[x.id + ":skip"]) await store.deleteDone(x.id + ":skip"); } }, "Dinner is back on") : h("button", { class: "btn quiet sm", style: "border-color:var(--red);color:var(--red)", onclick: noDinner }, "✕ No dinner tonight"))); }
-    if (isMgr()) main.appendChild(h("div", { style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:-8px" }, h("span", { class: "note" }, "Someone can't today?"), R.pool.map(p => h("button", { class: "btn quiet sm", onclick: () => clearDaySheet(p, d) }, "Clear " + R.people[p].label + "'s day"))));
+    if (isMgr()) main.appendChild(h("div", { style: "margin-top:-8px" }, h("button", { class: "btn quiet sm", onclick: () => asWho(R.pool, "Who can't today?", (p) => clearDaySheet(p, d)) }, "Someone can't today?"))); // one button instead of five (Mama, 8 Nov 02:35)
     // zones
     const zones = zoneTiles();
     main.appendChild(sec("Zones this week", h("div", { class: "grid3" }, zones.map(a => {
@@ -1829,7 +1831,7 @@
         : open && mineA && !S.done[mineA.id] ? h("div", { class: "acts" }, h("button", { class: "btn ghost sm", onclick: () => finish(mineA) }, "Mine's away")) : null);
       strip.appendChild(s);
     }
-    strip.appendChild(shopTile());
+    // no shopping tile here: the 🛒 Shop button is at the top
     // the "Weekend jobs N of N" tile is gone: tap a name in the streak row instead (Mama, 7 Nov 21:15)
     main.appendChild(sec("Today", strip));
     if (isBoard()) main.appendChild(h("div", { class: "note", style: "text-align:right" }, h("button", { class: "btn quiet sm", onclick: () => { localStorage.removeItem("vatra.me"); S.me = null; render(); } }, "This device: Kitchen board · change")));
