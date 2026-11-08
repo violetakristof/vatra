@@ -197,17 +197,23 @@
   .bstep .s { font-size:12px; color:var(--mute); }
   .bstep .acts { margin-top:auto; display:flex; gap:8px; padding-top:8px; flex-wrap:wrap; align-items:center; }
   .bstep.done, .bstep.auto { background:var(--greenbg); border-color:var(--green); }
-  .bstep.locked, .bstep.future, .bstep.cancelled, .bstep.passed { background:var(--soft); border-style:dashed; border-color:var(--soft2); opacity:.75; }
+  .bstep.locked, .bstep.future { background:var(--soft); border-style:dashed; border-color:var(--soft2); opacity:.75; }
+  .bstep.cancelled, .bstep.passed { background:var(--soft); border-color:var(--soft2); opacity:.6; }
   .bstep.cancelled .k { text-decoration:line-through; }
   .bstep.active { border:3px solid var(--ink); background:#fff; box-shadow:0 6px 18px rgba(0,0,0,.08); }
   .bstep.active .n, .bstep.active .namebtn { font-size:30px; }
-  .bstep.active .pomo { font-size:20px; padding:12px 18px; border-radius:14px; border-width:2px; }
+  .bstep.active .pomo { font-size:20px; padding:12px 14px; border-radius:14px; border-width:2px; width:100%; white-space:normal; box-sizing:border-box; }
   .bstep.active .pomo.on { background:var(--ink); color:#fff; }
   .bstep.active .btn:not(.pomo):not(.sm) { font-size:18px; padding:12px 18px; }
   .bstep.overdue { border-color:var(--red); }
   .bstep .now { font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--amberink); background:var(--amberbg); border-radius:999px; padding:2px 8px; align-self:flex-start; }
-  .bchips { display:flex; flex-wrap:wrap; gap:8px; }
-  .bchip { display:flex; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--line); border-radius:14px; padding:8px 12px; font-size:15px; min-height:46px; }
+  .bchips { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:10px; }
+  .bchip { display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--card); border:1.5px solid var(--line); border-radius:14px; padding:10px 14px; font-size:15px; min-height:64px; }
+  .bchip > div:first-child { min-width:0; }
+  body.board .label { margin:22px 0 10px; font-size:13px; letter-spacing:.12em; }
+  body.board .main > div:first-child .label { margin-top:0; }
+  .bzone .acts { min-height:56px; }
+  .bstep .acts { min-height:48px; }
   .bchip b { font-size:16px; }
   .bchip .k { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--mute); }
   .bchip.done { background:var(--greenbg); border-color:var(--green); opacity:.7; }
@@ -788,11 +794,11 @@
     if (a.kind === "zone") { const t = pool.find(x => x.bathDay && x.chore === a.chore && x.date === y); return !!t && !S.done[t.id]; }
     return false;
   }
-  const markLate = (el, a) => {
+  const markLate = (el, a, noMissed) => {
     let tag = null;
     if (lateOpen(a)) { el.classList.add("late"); tag = h("div", { class: "latetag" }, a.chore === "shop" && !isLate() ? "SHOP TODAY · still time for Costco" : "LATE · still counts until 6 am"); }
     else if (state(a) === "overdue") tag = h("div", { class: "redtag" }, "NOT DONE · since " + fmtDay(a.due || a.date).replace(/,.*/, ""));
-    else if (missedYesterday(a)) tag = h("div", { class: "redtag" }, "MISSED " + E.dow(E.addDays(S.today, -1)) + " · counted as not done");
+    else if (!noMissed && missedYesterday(a)) tag = h("div", { class: "redtag" }, "MISSED " + E.dow(E.addDays(S.today, -1)) + " · counted as not done");
     if (tag) { const anchor = el.querySelector(".ftag") || el.querySelector(".n") || el.querySelector(".k"); if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(tag, anchor.nextSibling); else el.prepend(tag); }
     return el;
   };
@@ -1586,8 +1592,8 @@
         h("div", { class: "acts" }, st === "done" ? h("span", { class: "note" }, "week done") : sk ? [h("span", { class: "note" }, "today cancelled"), isMgr() ? h("button", { class: "btn quiet sm", onclick: () => unskipTile(a) }, "Restore") : null]
           : today ? [h("button", { class: "btn tick on", onclick: () => store.deleteDone(k) }, "✓ Today"), S.done[k] && S.done[k].covered ? h("span", { class: "note" }, "🛟 " + ((R.people[S.done[k].person] || {}).label || "")) : null]
           : [h("button", { class: "btn tick ghost", onclick: () => finishDay(a) }, "○ Done today"), isMgr() ? h("button", { class: "btn quiet sm xbtn", onclick: () => skipTile(a) }, "✕") : null],
-          a.carried ? null : messBtn(a)));
-      fx(z, a); markLate(z, a); longPress(z, () => sheetFor(a)); return z;
+          null));
+      fx(z, a); markLate(z, a, true); longPress(z, () => sheetFor(a)); return z;
     }))));
     // 2. tonight chain with 🍅 on the active step
     const ev = (role) => W.assignments.find(a => a.kind === "evening" && a.role === role && a.date === d);
@@ -1602,7 +1608,7 @@
         a.unassigned ? null : h("div", { class: "acts" }, isAuto ? [S.me !== a.person ? h("button", { class: "btn ghost sm", onclick: () => asWho(R.order.filter(p => p !== a.person), "Who's cooking tonight?", (p) => override(a, p, "claim")) }, "I'll cook") : null, cancelBtn(a, st)] : [].concat(acts(a, st, isActive), unclaimBtn(a, st) || [])));
       fx(t, a); markLate(t, a); longPress(t, () => sheetFor(a)); return t;
     }));
-    main.appendChild(sec("Tonight", chain));
+    main.appendChild(sec("Dinner organization", chain));
     if (isMgr()) { const evs = steps; const allOff = evs.length && evs.every(x => S.done[x.id + ":skip"] || S.done[x.id]);
       main.appendChild(h("div", { style: "margin:-6px 0 10px" }, allOff && evs.some(x => S.done[x.id + ":skip"]) ? h("button", { class: "btn quiet sm", onclick: async () => { for (const x of evs) if (S.done[x.id + ":skip"]) await store.deleteDone(x.id + ":skip"); } }, "Dinner is back on") : h("button", { class: "btn quiet sm", style: "border-color:var(--red);color:var(--red)", onclick: noDinner }, "✕ No dinner tonight"))); }
     // 3. everything else as chips; done ones fade out after an hour
@@ -1927,6 +1933,7 @@
       if (S.done[a.id + ":override"]) kids.push(h("button", { class: "btn quiet sm", onclick: async () => { await store.deleteDone(a.id + ":override"); closeSheet(); } }, "Back to " + R.people[a.person].label));
     }
     kids.push(h("p", {}, R.dod[a.chore] || ""));
+    if (a.kind === "zone" && !a.carried && messArea(a)) { const mb = messBtn(a); if (mb) { mb.className = "btn quiet"; kids.push(mb); } }
     if (isMgr() && !a.ask && a.chore) kids.push(h("button", { class: "btn quiet sm", onclick: () => textSheet(a) }, "✎ Edit description"));
     { const zoneDone = a.kind === "zone" && !a.carried && S.done[dayId(a)]; if (st !== "done" && st !== "cancelled" && !zoneDone && !skipped(a)) { const cb = coverBtn(a, true); if (cb) kids.push(cb, h("p", { class: "note" }, "Covered = you did it because it had to be done. The minutes go to you; for " + ((R.people[effPerson(a)] || {}).label || "them") + " it counts as not done tonight.")); } }
     if (!isBoard() && effPerson(a) === S.me && swapOpen(a) && R.pool.includes(S.me)) kids.push(h("button", { class: "btn ghost", onclick: () => swapSheet(a) }, "Ask someone to swap"));
