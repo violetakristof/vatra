@@ -335,9 +335,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794154702"></script>
-<script src="./engine.js?v=1794154702"></script>
-<script>window.VATRA_BUILD="1794154702";</script>
+<script src="./rules.js?v=1794154821"></script>
+<script src="./engine.js?v=1794154821"></script>
+<script>window.VATRA_BUILD="1794154821";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1244,7 +1244,8 @@
         m && canPlan() ? h("button", { class: "btn quiet sm", onclick: () => { S._mealChange = !S._mealChange; refreshShopSheet(); } }, S._mealChange ? "Keep" : "Change") : null),
       picking && canPlan() ? h("div", { class: "shopedit" },
         ideas.length ? h("div", { class: "pick" }, ideas.map(x => h("button", { onclick: () => pick(x) }, x.text))) : null,
-        addRow("New meal idea", (t, p) => addMealIdea(t, p).then(x => pick(x)))) : null,
+        addRow("New meal idea", (t, p) => addMealIdea(t, p).then(x => pick(x))),
+        m ? h("button", { class: "btn quiet sm", style: "margin-top:8px", onclick: () => { S._mealChange = false; planMeal(m, null); } }, "✕ No meal picked") : null) : null,
       h("div", { class: "label", style: "margin-top:16px;display:flex;justify-content:space-between" }, h("span", {}, "🛒 Shopping list"), h("span", {}, String(open.length))),
       addRow("Add to the list", addItem, h("div", { class: "shopcats" }, Object.values(cb))),
       open.length ? h("div", { class: "list", style: "margin-top:8px" }, open.map(shopRow)) : null,
