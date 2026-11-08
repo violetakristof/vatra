@@ -301,9 +301,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794121620"></script>
-<script src="./engine.js?v=1794121620"></script>
-<script>window.VATRA_BUILD="1794121620";</script>
+<script src="./rules.js?v=1794121700"></script>
+<script src="./engine.js?v=1794121700"></script>
+<script>window.VATRA_BUILD="1794121700";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1726,6 +1726,12 @@
         un ? null : h("div", { style: "display:flex;gap:4px" }, claim ? [h("button", { class: "btn sm", onclick: () => asWho(claimers, "Who's folding?", (p) => override(a, p, "claim")) }, "Claim"), ...acts(a, st)] : acts(a, st)));
       fx(c, a); markLate(c, a); longPress(c, () => sheetFor(a)); (folded ? doneChips : chips).appendChild(c);
     }
+    // everything else anyone finished today goes into ✓ Done today too: My Room Deep, Sheets, Inbox, Reset, weekly jobs done early… (Mama, 8 Nov 02:07)
+    { const seen = new Set(todays.map(a => a.id)); const pool = [].concat(W.assignments, PV() ? PV().assignments : []).filter(okBath);
+      for (const a of pool) { if (seen.has(a.id) || ["evening", "zone", "arrival", "streak"].includes(a.kind) || a.bathDay || a === gb || a.chore === "dishPrep") continue;
+        const dd = S.done[a.id]; if (!dd || dd.deleted || dd.date !== d) continue; seen.add(a.id);
+        const c = h("div", { class: "bchip done" }, h("div", {}, h("div", { class: "k" }, a.label), h("b", {}, (R.people[dd.person] || R.people[effPerson(a)] || { label: "" }).label), h("div", { class: "s", style: "font-size:11px;color:var(--mute)" }, "✓ " + (dd.at ? new Date(dd.at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).toLowerCase() : "done"))));
+        longPress(c, () => sheetFor(a)); doneChips.appendChild(c); } }
     if (chips.children.length) main.appendChild(sec("Today", chips));
     if (doneChips.children.length) main.appendChild(foldBox("✓ Done today (" + doneChips.children.length + ")", [doneChips], "_boardDoneOpen"));
     main.appendChild(h("div", { class: "note", style: "text-align:right;font-size:11px" }, "Kitchen board · hold the 👤 pill to change this device"));
