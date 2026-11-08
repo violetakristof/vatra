@@ -289,9 +289,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794120253"></script>
-<script src="./engine.js?v=1794120253"></script>
-<script>window.VATRA_BUILD="1794120253";</script>
+<script src="./rules.js?v=1794120667"></script>
+<script src="./engine.js?v=1794120667"></script>
+<script>window.VATRA_BUILD="1794120667";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -446,6 +446,7 @@
   function loadLocal() {
     const d = local.get("done") || {}; S.done = {}; for (const k in d) S.done[d[k].id || k] = d[k];
     S.prevWeek = local.get("weeks." + E.addDays(monday(), -7));
+    S.nextWeek = local.get("weeks." + E.addDays(monday(), 7)) || null;
     S.ideas = Object.values(local.get("ideas") || {});
     S.rewards = Object.values(local.get("rewards") || {});
     S.mess = Object.values(local.get("mess") || {});
@@ -476,6 +477,14 @@
   const HIDE_TATA = ["room", "pillow", "sheets", "putaway", "roomReset", "roomDeep"];
   function V() { return S.week ? viewOf(S.week) : null; }
   function PV() { return S.prevWeek && S.prevWeek.week === E.addDays(monday(), -7) ? viewOf(S.prevWeek) : null; }
+  // zones run Sunday to Saturday (Mama, 8 Nov 01:45): the Sunday before a Monday week belongs to that week's zone owners.
+  // Until next week exists, Sunday stays with the current owners.
+  const mondayOf = (d) => E.addDays(d, -((new Date(d + "T12:00:00").getDay() + 6) % 7));
+  function viewByWeek(wk) { if (S.week && S.week.week === wk) return V(); if (S.nextWeek && S.nextWeek.week === wk) return viewOf(S.nextWeek); if (S.prevWeek && S.prevWeek.week === wk) return viewOf(S.prevWeek); return null; }
+  function zoneWeekOf(d) { const w = mondayOf(E.addDays(d, 1)), m = mondayOf(d); return w === m || viewByWeek(w) ? w : m; }
+  const NV = () => S.nextWeek ? viewOf(S.nextWeek) : null;
+  const okBath = (a) => !a.bathDay || a.week === zoneWeekOf(a.date);
+  function zoneTiles() { const Z = viewByWeek(zoneWeekOf(S.today)) || V(); return Z ? Z.assignments.filter(a => a.kind === "zone") : []; }
   function viewOf(wkDoc) {
     const moves = Object.values(S.done).filter(d => d && (d.move || d.cancel) && d.week === wkDoc.week);
     const STD = (S.settings && S.settings.std) || {};
@@ -572,7 +581,7 @@
       w.assignments = w.assignments.filter(x => !(x.chore === "roomReset" && deep[x.person + "|" + x.date])); }
     // bathroom light is a must every day: one hidden tile per day, shown only when missed
     for (const z of w.assignments.filter(x => x.kind === "zone")) {
-      for (let i = 0; i < 7; i++) { const date = E.addDays(wkDoc.week, i); if (R.startDate && date < R.startDate) continue;
+      for (let i = -1; i < 7; i++) { const date = E.addDays(wkDoc.week, i); if (R.startDate && date < R.startDate) continue; // Sun before to Sun after; okBath() keeps the right one
         w.assignments.push({ id: z.id + "@" + date, week: wkDoc.week, kind: "bathDay", bathDay: true, zoneRef: z.id, chore: z.chore, label: z.label + " · " + E.dow(date), person: z.person, date, due: date, minutes: Math.max(1, Math.round((z.minutes || 35) / 7)), counts: false, quiet: true }); }
     }
     w.assignments = E.applyStd(R, w.assignments.map(x => Object.assign({}, x))).map(x => STD[x.chore] && x.minutes > 0 ? Object.assign({}, x, { minutes: STD[x.chore] }) : x);
@@ -845,9 +854,9 @@
   // a missed daily must (Reset, Bathroom) is recorded as not done; today's tile carries a red note, never a second task
   function missedYesterday(a) {
     const y = E.addDays(S.today, -1); if (R.startDate && y < R.startDate) return false;
-    const pool = [].concat(V() ? V().assignments : [], PV() ? PV().assignments : []);
+    const pool = [].concat(V() ? V().assignments : [], PV() ? PV().assignments : [], NV() ? NV().assignments : []).filter(okBath);
     if (a.chore === "roomReset" && a.date === S.today) { const t = pool.find(x => x.chore === "roomReset" && x.date === y && effPerson(x) === effPerson(a)); return !!t && !S.done[t.id]; }
-    if (a.kind === "zone") { const t = pool.find(x => x.bathDay && x.chore === a.chore && x.date === y); return !!t && !S.done[t.id]; }
+    if (a.kind === "zone") { const t = pool.find(x => x.bathDay && x.zoneRef === a.id && x.date === y); return !!t && !S.done[t.id]; }
     return false;
   }
   const markLate = (el, a, noMissed) => {
@@ -858,7 +867,7 @@
     if (tag) { const anchor = el.querySelector(".ftag") || el.querySelector(".n") || el.querySelector(".k"); if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(tag, anchor.nextSibling); else el.prepend(tag); }
     return el;
   };
-  function lateList() { const W = V(); if (!W || !isLateAt(SHOP_LATE)) return []; return W.assignments.concat(askTiles()).filter(a => lateOpen(a) && (a.kind === "evening" || a.kind === "zone" || a.kind === "fixed" || a.kind === "laundry" || a.chore === "roomReset" || a.ask)); }
+  function lateList() { const W = V(); if (!W || !isLateAt(SHOP_LATE)) return []; return W.assignments.filter(a => a.kind !== "zone").concat(zoneTiles(), askTiles()).filter(a => lateOpen(a) && (a.kind === "evening" || a.kind === "zone" || a.kind === "fixed" || a.kind === "laundry" || a.chore === "roomReset" || a.ask)); }
 
 
   // ---------- before 10 pm: on-time nights, streaks, pink screens, family reward ----------
@@ -899,7 +908,7 @@
   // the must-do tiles of one evening: Dinner Service, Finisher, laundry, fixed jobs, zone days, My Room Reset, dated weekly jobs, asks
   const NIGHT_OWN = ["roomReset", "roomDeep", "filing", "sheets"];
   function nightTiles(d) {
-    const pool = [].concat(V() ? V().assignments : [], PV() ? PV().assignments : []);
+    const pool = [].concat(V() ? V().assignments : [], PV() ? PV().assignments : [], NV() ? NV().assignments : []).filter(okBath);
     const out = [];
     for (const a of pool) {
       // a job counts on its date, or (undated weekend/week jobs) on its due day: My Room Deep, Inbox to Library, Sheets, Vacuum... (Mama, 7 Nov 21:02)
@@ -959,7 +968,7 @@
   }
   // tap a name in the streak row: that person's jobs today, done (with time) and not done (Mama, 7 Nov 20:56)
   function dayItems(p, d) {
-    const pool = [].concat(V() ? V().assignments : [], PV() ? PV().assignments : [], askTiles());
+    const pool = [].concat(V() ? V().assignments : [], PV() ? PV().assignments : [], NV() ? NV().assignments : [], askTiles()).filter(okBath);
     const out = [], seen = {};
     for (const a of pool) {
       if (seen[a.id]) continue;
@@ -1408,7 +1417,7 @@
   function overdueList() {
     if (!S.week) return [];
     const out = [];
-    for (const a of V().assignments) {
+    for (const a of V().assignments.filter(okBath)) {
       if (a.chore === "putaway") { if (st_(a) === "overdue") out.push({ a, person: a.person, what: "Put away clothes", since: a.due }); continue; }
       if (a.own && a.chore !== "roomReset") continue;
       if (a.counts === false && a.chore !== "roomReset" && !a.bathDay) continue;
@@ -1639,7 +1648,7 @@
   }
 
   // ---------- Kitchen board (Mama, 8 Nov 00:32): zones first, then the dinner chain with 🍅, then chips ----------
-  const DOTS = (a) => { const W = V(); const start = a.week < R.startDate ? R.startDate : a.week; const out = []; for (let i = 0; i < 7; i++) { const d = E.addDays(a.week, i); const did = S.done[a.id + "@" + d]; const sk = S.done[a.id + "@" + d + ":skip"]; if (d < start) continue; /* days before the app started: no dot (Mama, 8 Nov 01:43) */ else if (did) out.push(["●", ""]); else if (sk) out.push(["○", "o"]); else if (d < S.today) out.push(["●", "x"]); else if (d === S.today) out.push(["◉", "t"]); else out.push(["○", "o"]); } return h("div", { class: "dots", title: "Mon to Sun" }, out.map(([c, k]) => h("span", { class: k }, c))); };
+  const DOTS = (a) => { const W = V(); const start = R.startDate || ""; const out = []; for (let i = -1; i < 6; i++) { const d = E.addDays(a.week, i); /* dots run Sun to Sat (Mama, 8 Nov 01:45) */ const did = S.done[a.id + "@" + d]; const sk = S.done[a.id + "@" + d + ":skip"]; if (d < start) continue; /* days before the app started: no dot (Mama, 8 Nov 01:43) */ else if (did) out.push(["●", ""]); else if (sk) out.push(["○", "o"]); else if (d < S.today) out.push(["●", "x"]); else if (d === S.today) out.push(["◉", "t"]); else out.push(["○", "o"]); } return h("div", { class: "dots", title: "Sun to Sat" }, out.map(([c, k]) => h("span", { class: k }, c))); };
   function boardView(main) {
     const W = V(), d = S.today;
     { const hn = houseNight(d); if (hn.hit) { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "House done before 10 🎉", h("div", { style: "font-size:14px;font-weight:500" }, "Everyone finished on time tonight."))); confetti("house:" + d); }
@@ -1648,7 +1657,7 @@
     { const sc = swapCards(); if (sc) main.appendChild(sec("Swap requests", sc)); }
     { const late = lateList().map(a => (R.people[effPerson(a)] || {}).label + " · " + a.label); if (late.length) main.appendChild(h("div", { class: "latebar" }, h("b", {}, isLate() ? "After 10 pm · still open: " : "Still open: "), late.join(", "), h("div", { style: "font-size:12px;opacity:.9;margin-top:2px" }, "Orange tiles still count for " + fmtDay(d).replace(/,.*/, "") + " until 6 am."))); }
     // 1. zones
-    const zones = W.assignments.filter(a => a.kind === "zone");
+    const zones = zoneTiles();
     main.appendChild(sec("Zones this week", h("div", { class: "bzones" }, zones.map(a => {
       const st = state(a), k = dayId(a), today = zoneToday(a), sk = S.done[k + ":skip"];
       const mc = a.chore === "bathLight" ? messCount(W.week) : null;
@@ -1730,7 +1739,7 @@
       main.appendChild(h("div", { style: "margin:-6px 0 10px" }, allOff && evs.some(x => S.done[x.id + ":skip"]) ? h("button", { class: "btn quiet sm", onclick: async () => { for (const x of evs) if (S.done[x.id + ":skip"]) await store.deleteDone(x.id + ":skip"); } }, "Dinner is back on") : h("button", { class: "btn quiet sm", style: "border-color:var(--red);color:var(--red)", onclick: noDinner }, "✕ No dinner tonight"))); }
     if (isMgr()) main.appendChild(h("div", { style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:-8px" }, h("span", { class: "note" }, "Someone can't today?"), R.pool.map(p => h("button", { class: "btn quiet sm", onclick: () => clearDaySheet(p, d) }, "Clear " + R.people[p].label + "'s day"))));
     // zones
-    const zones = W.assignments.filter(a => a.kind === "zone");
+    const zones = zoneTiles();
     main.appendChild(sec("Zones this week", h("div", { class: "grid3" }, zones.map(a => {
       const st = state(a);
       const mc = a.chore === "bathLight" ? messCount(W.week) : null;
@@ -1792,7 +1801,7 @@
     { const mc = messCards(); if (mc) main.appendChild(mc); }
     // 🤲 I helped and 🎁 I'd like… now live inside the 🙋 button (Mama, 7 Nov 21:15)
     const W = V();
-    const my = W.assignments.filter(a => isMineTile(a) && a.kind !== "arrival" && a.kind !== "streak" && (!a.bathDay || state(a) === "overdue")).concat(carried().filter(isMineTile)).concat(askTiles().filter(a => effPerson(a) === S.me && (a.date >= S.today || state(a) !== "done")));
+    const my = W.assignments.filter(a => a.kind !== "zone" && okBath(a)).concat(zoneTiles()).filter(a => isMineTile(a) && a.kind !== "arrival" && a.kind !== "streak" && (!a.bathDay || state(a) === "overdue")).concat(carried().filter(isMineTile)).concat(askTiles().filter(a => effPerson(a) === S.me && (a.date >= S.today || state(a) !== "done")));
     // Today first: today's dated jobs, the week-long zones (daily), weekly any-day jobs, weekend jobs on Sat/Sun, anything overdue.
     const isWknd = ["Sat", "Sun"].includes(E.dow(S.today));
     const isToday = (a) => a.date === S.today || a.kind === "zone" || (!a.date && a.window === "week") || (!a.date && a.window === "wknd" && isWknd) || state(a) === "overdue";
@@ -1801,7 +1810,7 @@
     todayList.sort((x, y) => rank(x) - rank(y));
     const byDay = {};
     for (const a of my) { if (todayList.includes(a)) continue; if (a.date && a.date < S.today) continue; const k = a.date || (a.window === "wknd" ? "weekend" : "this week"); (byDay[k] = byDay[k] || []).push(a); }
-    for (const z of my.filter(a => a.kind === "zone" && !a.carried)) for (let i = 1; i <= 6; i++) { const dd = E.addDays(S.today, i); if (dd > E.addDays(W.week, 6)) break; (byDay[dd] = byDay[dd] || []).unshift(Object.assign({}, z, { _zoneDay: dd })); }
+    for (const z of my.filter(a => a.kind === "zone" && !a.carried)) for (let i = 1; i <= 6; i++) { const dd = E.addDays(S.today, i); if (dd > E.addDays(z.week, 5)) break; /* zones end Saturday */ (byDay[dd] = byDay[dd] || []).unshift(Object.assign({}, z, { _zoneDay: dd })); }
     const keys = Object.keys(byDay).sort((x, y) => (x < y ? -1 : 1));
     { const ac = askCards(); if (ac) main.appendChild(ac); }
     { const sc = swapCards(); if (sc) main.appendChild(h("div", {}, h("div", { class: "label" }, "Swap requests"), sc)); }
