@@ -304,9 +304,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794123380"></script>
-<script src="./engine.js?v=1794123380"></script>
-<script>window.VATRA_BUILD="1794123380";</script>
+<script src="./rules.js?v=1794123871"></script>
+<script src="./engine.js?v=1794123871"></script>
+<script>window.VATRA_BUILD="1794123871";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -366,7 +366,12 @@
     pomo: JSON.parse(localStorage.getItem("vatra.pomo") || "{}"),
     today: todayStr(),
   };
-  const monday = () => E.mondayOf(S.today);
+  // from Sun 15 Nov the schedule runs Sunday to Saturday (Mama, 8 Nov 02:40). Week docs keep their Monday key;
+  // a week keyed SUN_WEEKS or later covers the Sunday before its Monday through Saturday.
+  const SUN_WEEKS = "2026-11-16";
+  const wkStart = (wk) => wk >= SUN_WEEKS ? E.addDays(wk, -1) : wk;
+  const wkDates = (wk) => [0, 1, 2, 3, 4, 5, 6].map(i => E.addDays(wkStart(wk), i)).filter(d => !(wk === "2026-11-09" && d === "2026-11-15")); // the 9 Nov week ends Saturday 14
+  const monday = () => E.mondayOf(S.today >= E.addDays(SUN_WEEKS, -1) ? E.addDays(S.today, 1) : S.today);
 
   // ---------- local fallback store (no db) ----------
   const local = {
@@ -594,6 +599,11 @@
         for (const p of R.order) if (p !== "Tata") w.assignments.push({ id: wkDoc.week + "#reset:" + p + ":" + date, week: wkDoc.week, kind: "own", chore: "roomReset", label: "My Room Reset", person: p, date, due: date, minutes: 5, own: true, counts: false, quiet: true }); }
     }
     w.assignments = w.assignments.map(x => x.chore === "roomReset" && !x.quiet ? Object.assign({}, x, { quiet: true }) : x);
+    // Sunday-to-Saturday weeks: the week's Sunday jobs move to the Sunday before its Monday; jobs due Sunday become due Saturday
+    if (wkDoc.week >= SUN_WEEKS) { const sun7 = E.addDays(wkDoc.week, 6), sun0 = E.addDays(wkDoc.week, -1), sat = E.addDays(wkDoc.week, 5);
+      w.assignments = w.assignments.map(x => x.date === sun7 ? Object.assign({}, x, { date: sun0, due: x.due === sun7 ? sun0 : x.due }) : (!x.date && x.due === sun7) ? Object.assign({}, x, { due: sat, dueSun: false }) : x); }
+    // the last Monday week ends Saturday 14 Nov: its Sunday 15 now belongs to the next week
+    if (wkDoc.week === "2026-11-09") w.assignments = w.assignments.filter(x => x.date !== "2026-11-15").map(x => (!x.date && x.due === "2026-11-15") ? Object.assign({}, x, { due: "2026-11-14", dueSun: false }) : x);
     // no My Room Reset on the day you have My Room Deep (Saturday) (Mama, 7 Nov 21:01)
     { const deep = {}; for (const x of w.assignments) if (x.chore === "roomDeep") deep[x.person + "|" + (x.date || x.due)] = 1;
       w.assignments = w.assignments.filter(x => !(x.chore === "roomReset" && deep[x.person + "|" + x.date])); }
@@ -818,7 +828,7 @@
   // Clear a person's day: move every open shared tile of theirs on a date to whoever has the lightest load (or a chosen person)
   function clearDaySheet(p, date) {
     const W = V();
-    const tiles = W.assignments.filter(a => effPerson(a) === p && !a.own && !a.auto && a.kind !== "arrival" && a.kind !== "streak" && (a.date === date || (!a.date && date === E.addDays(W.week, 6))) && state(a) !== "done");
+    const tiles = W.assignments.filter(a => effPerson(a) === p && !a.own && !a.auto && a.kind !== "arrival" && a.kind !== "streak" && (a.date === date || (!a.date && date === (a.due || E.addDays(W.week, 6)))) && state(a) !== "done");
     const led = E.ledger(R, Object.values(S.done), S.today);
     const others = R.pool.filter(x => x !== p && !(S.away[x] || []).includes(date));
     const autoPick = (a) => { const ok = others.filter(x => !(a.chore === "finisher" && !R.qual.finisher.includes(x)) && !(a.chore === "deepBath" && !R.kids.includes(x)) && !(a.chore === "bathLight" && !R.kids.includes(x))); ok.sort((x, y) => led[x].total - led[y].total); return ok[0] || others[0]; };
@@ -1741,8 +1751,8 @@
     // 3. everything else as chips; done ones fade out after an hour
     const chips = h("div", { class: "bchips" }), doneChips = h("div", { class: "bchips" });
     const fresh = (a) => { const dd = S.done[a.id]; return !dd || !dd.at || Date.now() - new Date(dd.at) < 3600000; };
-    const isWk = ["Sat", "Sun"].includes(E.dow(d));
-    const todays = W.assignments.filter(a => !["evening", "zone", "arrival", "streak"].includes(a.kind) && !a.own && a !== gb && a.chore !== "dishPrep" && (a.date === d || (!a.date && a.window === "wknd" && isWk) || (!a.date && a.window === "week" && E.dow(d) === "Sun")));
+    const isWk = E.dow(d) === "Sat" || (E.dow(d) === "Sun" && W.week < SUN_WEEKS);
+    const todays = W.assignments.filter(a => !["evening", "zone", "arrival", "streak"].includes(a.kind) && !a.own && a !== gb && a.chore !== "dishPrep" && (a.date === d || (!a.date && a.window === "wknd" && isWk) || (!a.date && a.window === "week" && a.due === d)));
     for (const a of todays) {
       const st = state(a); const folded = (st === "done" && !fresh(a)) || st === "cancelled";
       const un = a.unassigned && !S.done[a.id + ":override"];
@@ -1857,7 +1867,7 @@
     const W = V();
     const my = W.assignments.filter(a => a.kind !== "zone" && okBath(a)).concat(zoneTiles()).filter(a => isMineTile(a) && a.kind !== "arrival" && a.kind !== "streak" && (!a.bathDay || state(a) === "overdue")).concat(carried().filter(isMineTile)).concat(askTiles().filter(a => effPerson(a) === S.me && (a.date >= S.today || state(a) !== "done")));
     // Today first: today's dated jobs, the week-long zones (daily), weekly any-day jobs, weekend jobs on Sat/Sun, anything overdue.
-    const isWknd = ["Sat", "Sun"].includes(E.dow(S.today));
+    const isWknd = E.dow(S.today) === "Sat" || (E.dow(S.today) === "Sun" && S.week && S.week.week < SUN_WEEKS); // Sunday now starts the week
     const isToday = (a) => a.date === S.today || a.kind === "zone" || (!a.date && a.window === "week") || (!a.date && a.window === "wknd" && isWknd) || state(a) === "overdue";
     const todayList = my.filter(isToday).filter(a => !(a.date && a.date < S.today && state(a) !== "overdue"));
     const rank = (a) => { if (a.kind === "zone" && !a.carried && zoneToday(a)) return 3; if (lateOpen(a)) return -1; const st = state(a); return st === "overdue" ? 0 : st === "done" || st === "cancelled" ? 3 : st === "locked" ? 2 : 1; }; // orange (late, still open) first (Mama, 5 Nov 22:00)
@@ -1879,10 +1889,10 @@
     if (S._arrivalRow) { main.appendChild(S._arrivalRow); S._arrivalRow = null; }
     if (keys.length) main.appendChild(h("div", { style: "margin-top:18px;border-top:1px solid var(--line);padding-top:10px" }, foldBox("Later this week (" + keys.reduce((n, k) => n + byDay[k].length, 0) + ")", keys.map(k => { const list = h("div", { class: "list" }); for (const a of byDay[k]) list.appendChild(row(a)); return h("div", {}, h("div", { class: "label", style: "font-size:11px" }, k === "weekend" || k === "this week" ? k : fmtDay(k)), list); }), "_laterOpen")));
     // away days: small, at the bottom, folded
-    const myAway = (S.away[S.me] || []).filter(d => d >= W.week && d <= E.addDays(W.week, 6));
+    const myAway = (S.away[S.me] || []).filter(d => d >= wkStart(W.week) && d <= E.addDays(wkStart(W.week), 6));
     const det = h("details", { style: "margin-top:8px;font-size:13px;color:var(--mute)" },
       h("summary", { style: "cursor:pointer" }, myAway.length ? "Away: " + myAway.map(d => E.dow(d)).join(", ") : "Going to be away a day?"),
-      h("div", { class: "pick", style: "margin-top:8px" }, E.DAYS.map((d, i) => { const date = E.addDays(W.week, i); const on = myAway.includes(date); return h("button", { class: (on ? "on " : "") + "", style: "min-height:36px;font-size:13px", onclick: () => toggleAway(S.me, date) }, d); })),
+      h("div", { class: "pick", style: "margin-top:8px" }, wkDates(W.week).map((date) => { const d = E.dow(date); const on = myAway.includes(date); return h("button", { class: (on ? "on " : "") + "", style: "min-height:36px;font-size:13px", onclick: () => toggleAway(S.me, date) }, d); })),
       h("div", { class: "note", style: "margin-top:6px" }, "Used for next week's plan. For this week, ask for a swap or tell Mama."));
     if (S._awayOpen) det.setAttribute("open", "");
     det.addEventListener("toggle", () => { S._awayOpen = det.open; });
@@ -2038,7 +2048,7 @@
     { g.appendChild(h("div", { style: "padding:6px;font-weight:700;color:var(--mute);border-top:1px solid var(--soft)" }, "Zones"));
       for (const p of cols) { const cell = h("div", { style: "padding:5px;border-left:1px solid var(--soft);border-top:1px solid var(--soft);display:flex;flex-direction:column;gap:3px;min-width:0" });
         for (const a of W.assignments.filter(a => a.kind === "zone" && effPerson(a) === p)) cell.appendChild(tileEl(a)); g.appendChild(cell); } }
-    const rows = E.DAYS.map((d, i) => [d, E.addDays(W.week, i)]).concat([["Wknd", "wknd"]]);
+    const rows = wkDates(W.week).map(dt => [E.dow(dt), dt]).concat([["Wknd", "wknd"]]);
     for (const [d, date] of rows) {
       g.appendChild(h("div", { style: "padding:6px;font-weight:700;color:var(--mute);border-top:1px solid var(--soft)" + (date === S.today ? ";color:var(--ink)" : "") }, d));
       for (const p of cols) {
@@ -2088,7 +2098,7 @@
       if (!d.pace && a.minutes >= 10 && !a.auto && (effPerson(a) === S.me || S.me === "Mama" || isBoard())) kids.push(h("div", { class: "pick" }, h("button", { onclick: () => paceSheet(a, "faster") }, "Faster"), h("button", { onclick: async () => { await store.writeDone(a.id, Object.assign({}, d, { pace: "ok", real: a.minutes })); closeSheet(); } }, "About right"), h("button", { onclick: () => paceSheet(a, "slower") }, "Slower"))); }
     if (a.load != null && a.chore !== "putaway" && st !== "done") {
       kids.push(h("div", { class: "label", style: "margin-top:8px" }, "Move this load to"));
-      kids.push(h("div", { class: "pick" }, E.DAYS.map((dn, i) => { const date = E.addDays(S.week.week, i); if (date < S.today) return null; return h("button", { class: date === a.date ? "on" : "", onclick: async () => { await moveLoad(a, date); closeSheet(); } }, dn + (date === S.today ? " (today)" : "")); })));
+      kids.push(h("div", { class: "pick" }, wkDates(S.week.week).map((date) => { const dn = E.dow(date); if (date < S.today) return null; return h("button", { class: date === a.date ? "on" : "", onclick: async () => { await moveLoad(a, date); closeSheet(); } }, dn + (date === S.today ? " (today)" : "")); })));
       kids.push(h("p", { class: "note" }, "Wash, fold and deliver move together; put away follows the next day."));
       kids.push(h("button", { class: "btn quiet sm", onclick: async () => { await cancelLoad(a); closeSheet(); } }, "Not needed this week"));
     }
