@@ -135,9 +135,10 @@
     .dlong, .dshort { display:none !important; }
     .people { gap:5px; }
     .person { padding:6px 4px; min-height:46px; border-radius:12px; align-items:center; text-align:center; }
-    .person .pn { font-size:13px; }
+    .person .pn { font-size:13px; white-space:normal; justify-content:center; text-align:center; line-height:1.15; overflow:visible; }
     .person .pn i { display:none; }
-    .person .ps { padding-left:0; font-size:11px; }
+    .person .ps { padding-left:0; font-size:11px; margin-top:auto; }
+    .person { justify-content:flex-start; }
     .person.on { border-color:var(--green); }
     .main { padding:14px; }
     .row { flex-direction:column; gap:10px; }
@@ -288,9 +289,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794119972"></script>
-<script src="./engine.js?v=1794119972"></script>
-<script>window.VATRA_BUILD="1794119972";</script>
+<script src="./rules.js?v=1794120102"></script>
+<script src="./engine.js?v=1794120102"></script>
+<script>window.VATRA_BUILD="1794120102";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1459,8 +1460,8 @@
       const aw = (S.away[p] || []).includes(S.today);
       const n = S.week ? streakOf(p) : 0, r = S.week ? nightOf(p, S.today) : null, hit = r === "hit" || (r === null && S.week && freeNight(p, S.today));
       const c = h("button", { class: "person" + (on ? " on" : "") + (aw ? " off" : "") + (p === S.me ? " me" : "") + (hit ? " hit" : ""), onclick: () => arrival(p), title: "Tap when home · hold for today's jobs" },
-        h("span", { class: "pn" }, h("i"), R.people[p].label),
-        h("span", { class: "ps" }, aw ? "away" : [on ? "home" : "", S.week ? fireTxt(p) : ""].filter(Boolean).join(" · ") || "\u00a0"));
+        h("span", { class: "pn" }, h("i"), R.people[p].label + (aw ? " away" : on ? " home" : "")), // home inline, same font as the name (Mama, 8 Nov 01:40)
+        h("span", { class: "ps" }, S.week && !aw ? fireTxt(p) : "\u00a0"));
       longPress(c, () => daySheet(p)); return c;
     }));
     const tabList = isBoard() ? [["tonight", "Tonight"], ["week", "This week"], ["sunday", "Review"]] : [["mine", "Mine"], ["tonight", "Tonight"], ["week", "This week"], ["sunday", "Review"]];
