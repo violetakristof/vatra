@@ -312,9 +312,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794124797"></script>
-<script src="./engine.js?v=1794124797"></script>
-<script>window.VATRA_BUILD="1794124797";</script>
+<script src="./rules.js?v=1794124970"></script>
+<script src="./engine.js?v=1794124970"></script>
+<script>window.VATRA_BUILD="1794124970";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -382,6 +382,7 @@
   const wkDates = (wk) => (wk === "2026-11-02" ? [0, 1, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5, 6]).map(i => E.addDays(wkStart(wk), i)); /* the 2 Nov week ends Sat 7: its Sunday 8 jobs moved to the 9 Nov week */
   const monday = () => E.mondayOf(S.today >= E.addDays(FIRST_SUN, -1) ? E.addDays(S.today, 1) : S.today);
   const SUN8 = "2026-11-08"; let _sun8 = [];
+  const shopFri = (a, d) => a.chore === "shop" && !a.date && a.due && a.due >= "2026-11-13" && (d === a.due || d === E.addDays(a.due, -1)); /* Costco shows Friday and Saturday, due Saturday (Mama, 8 Nov 03:01) */
 
   // ---------- local fallback store (no db) ----------
   const local = {
@@ -617,7 +618,7 @@
     if (wkDoc.week === "2026-11-09") w.assignments = w.assignments.filter(x => x.date !== "2026-11-15").map(x => (!x.date && x.due === "2026-11-15") ? Object.assign({}, x, { due: "2026-11-14", dueSun: false }) : x);
     // Sunday 8 belongs to the 9 Nov week: the 2 Nov week hands over its Sunday jobs unchanged (same people, same ids)
     if (wkDoc.week === "2026-11-02") { _sun8 = w.assignments.filter(x => x.kind !== "zone" && (x.date === SUN8 || (!x.date && x.due === SUN8))); w.assignments = w.assignments.filter(x => !_sun8.includes(x)); }
-    if (wkDoc.week === FIRST_SUN) w.assignments = _sun8.concat(w.assignments);
+    if (wkDoc.week === FIRST_SUN) w.assignments = _sun8.filter(x => x.chore !== "shop").concat(w.assignments); /* Sun 8 Costco cancelled (Mama, 8 Nov 03:01) */
     // no My Room Reset on the day you have My Room Deep (Saturday) (Mama, 7 Nov 21:01)
     { const deep = {}; for (const x of w.assignments) if (x.chore === "roomDeep") deep[x.person + "|" + (x.date || x.due)] = 1;
       w.assignments = w.assignments.filter(x => !(x.chore === "roomReset" && deep[x.person + "|" + x.date])); }
@@ -1766,7 +1767,7 @@
     const chips = h("div", { class: "bchips" }), doneChips = h("div", { class: "bchips" });
     const fresh = (a) => { const dd = S.done[a.id]; return !dd || !dd.at || Date.now() - new Date(dd.at) < 3600000; };
     const isWk = E.dow(d) === "Sat" || (E.dow(d) === "Sun" && W.week < FIRST_SUN);
-    const todays = W.assignments.filter(a => !["evening", "zone", "arrival", "streak"].includes(a.kind) && !a.own && a !== gb && a.chore !== "dishPrep" && (a.date === d || (!a.date && a.window === "wknd" && isWk) || (!a.date && a.window === "week" && a.due === d)));
+    const todays = W.assignments.filter(a => !["evening", "zone", "arrival", "streak"].includes(a.kind) && !a.own && a !== gb && a.chore !== "dishPrep" && (a.date === d || shopFri(a, d) || (!a.date && a.window === "wknd" && isWk) || (!a.date && a.window === "week" && a.due === d)));
     for (const a of todays) {
       const st = state(a); const folded = (st === "done" && !fresh(a)) || st === "cancelled";
       const un = a.unassigned && !S.done[a.id + ":override"];
@@ -1882,7 +1883,7 @@
     const my = W.assignments.filter(a => a.kind !== "zone" && okBath(a)).concat(zoneTiles()).filter(a => isMineTile(a) && a.kind !== "arrival" && a.kind !== "streak" && (!a.bathDay || state(a) === "overdue")).concat(carried().filter(isMineTile)).concat(askTiles().filter(a => effPerson(a) === S.me && (a.date >= S.today || state(a) !== "done")));
     // Today first: today's dated jobs, the week-long zones (daily), weekly any-day jobs, weekend jobs on Sat/Sun, anything overdue.
     const isWknd = E.dow(S.today) === "Sat" || (E.dow(S.today) === "Sun" && S.week && S.week.week < FIRST_SUN); // Sunday now starts the week
-    const isToday = (a) => a.date === S.today || a.kind === "zone" || (!a.date && a.window === "week") || (!a.date && a.window === "wknd" && isWknd) || state(a) === "overdue";
+    const isToday = (a) => a.date === S.today || shopFri(a, S.today) || a.kind === "zone" || (!a.date && a.window === "week") || (!a.date && a.window === "wknd" && isWknd) || state(a) === "overdue";
     const todayList = my.filter(isToday).filter(a => !(a.date && a.date < S.today && state(a) !== "overdue"));
     const rank = (a) => { if (a.kind === "zone" && !a.carried && zoneToday(a)) return 3; if (lateOpen(a)) return -1; const st = state(a); return st === "overdue" ? 0 : st === "done" || st === "cancelled" ? 3 : st === "locked" ? 2 : 1; }; // orange (late, still open) first (Mama, 5 Nov 22:00)
     todayList.sort((x, y) => rank(x) - rank(y));
@@ -1898,7 +1899,7 @@
       S._arrivalRow = null; // the top chip is the home button (Mama, 8 Nov 01:09)
     }
     const row = (a) => { if (a._zoneDay) { const li = h("div", { class: "li future" }, h("div", {}, h("div", { class: "n" }, a.label + " · every day"), h("div", { class: "s" }, R.short[a.chore] || ""))); fx(li, a); return li; } const st = state(a); const li = h("div", { class: "li " + (a.kind === "zone" && !a.carried && zoneToday(a) && st !== "overdue" ? "done" : st) }, h("div", {}, h("div", { class: "n" }, a.label + (a.carried ? " · from last week" : a.kind === "zone" ? " · every day" : "")), h("div", { class: "s" }, a.kind === "zone" && !a.carried ? zoneDaysTxt(a) : (sub(a, st) || (st === "future" ? "later" : ""))), h("div", { class: "s", style: "color:var(--ink)" }, R.short[a.chore] || "")), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end" }, a.kind === "zone" && !a.carried ? zoneActs(a) : acts(a, st))); fx(li, a); markLate(li, a, true); longPress(li, () => sheetFor(a)); return li; };
-    main.appendChild(h("div", {}, h("div", { class: "label", style: "color:var(--ink)" }, "Today · " + fmtDay(S.today)), h("div", { class: "list" }, ...(() => { const shopRows = (S.me === "Tata" && (shopOpenItems().some(x => isUrg(x)) || W.assignments.some(x => (x.chore === "shop" || x.chore === "costco") && (x.date === S.today || (!x.date && ["Sat", "Sun"].includes(E.dow(S.today)))))) ? [(() => { const open = shopOpenItems(); const li = h("div", { class: "li" + (open.some(x => isUrg(x)) ? " overdue" : "") }, h("div", {}, h("div", { class: "n" }, "🛒 Shopping list"), h("div", { class: "s" }, open.length + " to buy" + (open.some(x => isUrg(x)) ? " · " + open.filter(x => isUrg(x)).length + " urgent" : "") + (open.some(x => x.meal) ? " · " + open.filter(x => x.meal).length + " meal ideas" : ""))), h("button", { class: "btn", onclick: shopSheet }, "Open")); li.addEventListener("click", (e) => { if (e.target.tagName !== "BUTTON") shopSheet(); }); return li; })()] : []); const dr = null, late = false; const openT = todayList.filter(a => rank(a) < 3), doneT = todayList.filter(a => rank(a) >= 3); const rows = openT.map(row).concat(doneT.length ? [foldBox("✓ Done today (" + doneT.length + ")", doneT.map(row), "_doneOpen")] : []); const nLate = todayList.filter(lateOpen).length; // orange jobs above everything, even the 🛒 row (Mama, 5 Nov 22:08)
+    main.appendChild(h("div", {}, h("div", { class: "label", style: "color:var(--ink)" }, "Today · " + fmtDay(S.today)), h("div", { class: "list" }, ...(() => { const shopRows = (S.me === "Tata" && (shopOpenItems().some(x => isUrg(x)) || W.assignments.some(x => (x.chore === "shop" || x.chore === "costco") && (x.date === S.today || shopFri(x, S.today) || (!x.date && ["Sat", "Sun"].includes(E.dow(S.today)))))) ? [(() => { const open = shopOpenItems(); const li = h("div", { class: "li" + (open.some(x => isUrg(x)) ? " overdue" : "") }, h("div", {}, h("div", { class: "n" }, "🛒 Shopping list"), h("div", { class: "s" }, open.length + " to buy" + (open.some(x => isUrg(x)) ? " · " + open.filter(x => isUrg(x)).length + " urgent" : "") + (open.some(x => x.meal) ? " · " + open.filter(x => x.meal).length + " meal ideas" : ""))), h("button", { class: "btn", onclick: shopSheet }, "Open")); li.addEventListener("click", (e) => { if (e.target.tagName !== "BUTTON") shopSheet(); }); return li; })()] : []); const dr = null, late = false; const openT = todayList.filter(a => rank(a) < 3), doneT = todayList.filter(a => rank(a) >= 3); const rows = openT.map(row).concat(doneT.length ? [foldBox("✓ Done today (" + doneT.length + ")", doneT.map(row), "_doneOpen")] : []); const nLate = todayList.filter(lateOpen).length; // orange jobs above everything, even the 🛒 row (Mama, 5 Nov 22:08)
       return rows.slice(0, nLate).concat(late ? [dr] : [], shopRows, rows.slice(nLate), late || !dr ? [] : [dr]); })())));
     if (S._arrivalRow) { main.appendChild(S._arrivalRow); S._arrivalRow = null; }
     if (keys.length) main.appendChild(h("div", { style: "margin-top:18px;border-top:1px solid var(--line);padding-top:10px" }, foldBox("Later this week (" + keys.reduce((n, k) => n + byDay[k].length, 0) + ")", keys.map(k => { const list = h("div", { class: "list" }); for (const a of byDay[k]) list.appendChild(row(a)); return h("div", {}, h("div", { class: "label", style: "font-size:11px" }, k === "weekend" || k === "this week" ? k : fmtDay(k)), list); }), "_laterOpen")));
@@ -2064,7 +2065,7 @@
         for (const a of W.assignments.filter(a => a.kind === "zone" && effPerson(a) === p)) cell.appendChild(tileEl(a)); g.appendChild(cell); } }
     const rows = wkDates(W.week).map(dt => [E.dow(dt), dt]); // no Wknd row: weekend and week-long jobs sit on their due day (Mama, 8 Nov 02:55)
     const lastDay = rows[rows.length - 1][1];
-    const cellItems = (p, date) => W.assignments.filter(a => effPerson(a) === p && a.kind !== "arrival" && a.kind !== "streak" && a.chore !== "putaway" && a.chore !== "roomReset" && !a.bathDay && a.kind !== "zone" && (!a.auto || a.chore === "cook") && (a.date === date || (!a.date && (a.due === date || (!a.due && date === lastDay)))));
+    const cellItems = (p, date) => W.assignments.filter(a => effPerson(a) === p && a.kind !== "arrival" && a.kind !== "streak" && a.chore !== "putaway" && a.chore !== "roomReset" && !a.bathDay && a.kind !== "zone" && (!a.auto || a.chore === "cook") && (a.date === date || shopFri(a, date) || (!a.date && (a.due === date || (!a.due && date === lastDay)))));
     // phones: one day at a time, full names (Mama, 8 Nov 02:48 "too cramped")
     if (window.innerWidth < 700 && !isBoard()) {
       const keys = rows.map(r => r[1]); if (!keys.includes(S._wkDay)) S._wkDay = keys.includes(S.today) ? S.today : keys[0];
