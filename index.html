@@ -191,7 +191,11 @@
   .bzone.overdue { border-color:var(--red); }
   .bzone .messbtn { margin-left:auto; }
   .bchain { display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:10px; }
-  @media (max-width: 1100px) { .bchain { grid-template-columns:repeat(3, minmax(0,1fr)); } }
+  .bchain .bstep { padding:10px 10px; min-height:96px; }
+  .bchain .bstep .k { font-size:10px; letter-spacing:.06em; }
+  .bchain .bstep .n, .bchain .bstep .namebtn { font-size:19px; }
+  .bchain .bstep.active .n, .bchain .bstep.active .namebtn { font-size:23px; }
+  .bstep.active .btn:not(.pomo):not(.sm) { font-size:16px; padding:10px 14px; }
   .bchain.calm .bstep { min-height:0; } .bchain.calm .bstep .s { display:none; } .bchain.calm .bstep .n, .bchain.calm .bstep .namebtn { font-size:18px; }
   .calmbar { background:var(--greenbg); border:1.5px solid var(--green); color:var(--green); border-radius:14px; padding:12px 16px; font-weight:700; font-size:16px; }
   .bstep.off { background:var(--soft); border-style:dashed; border-color:var(--soft2); opacity:.6; }
@@ -206,7 +210,7 @@
   .bstep.cancelled .k { text-decoration:line-through; }
   .bstep.active { border:3px solid var(--ink); background:#fff; box-shadow:0 6px 18px rgba(0,0,0,.08); }
   .bstep.active .n, .bstep.active .namebtn { font-size:30px; }
-  .bstep.active .pomo { font-size:17px; padding:12px 10px; border-radius:14px; border-width:2px; width:100%; white-space:normal; box-sizing:border-box; }
+  .bstep.active .pomo { font-size:15px; padding:10px 8px; border-radius:14px; border-width:2px; width:100%; white-space:normal; box-sizing:border-box; }
   .bstep.active .pomo.on { background:var(--ink); color:#fff; }
   .bstep.active .btn:not(.pomo):not(.sm) { font-size:18px; padding:12px 18px; }
   .bstep.overdue { border-color:var(--red); }
@@ -1610,7 +1614,7 @@
       const t = h("div", { class: "bstep " + (isAuto ? "auto" : st) + (isActive ? " active" : "") + (S.pomo[a.id] ? " running" : "") },
         h("div", { class: "k" }, a.label), isActive ? h("div", { class: "now" }, "Now") : null,
         nameEl(a, a.unassigned && !S.done[a.id + ":override"] ? (a.note || "not set") : (R.people[effPerson(a)] || {}).label || "—"),
-        h("div", { class: "s" }, isAuto ? "fixed role" : sub(a, st)), isActive ? h("div", { class: "s", style: "color:var(--ink)" }, R.short[a.chore] || "") : null,
+        h("div", { class: "s" }, isAuto ? "fixed role" : sub(a, st)),
         a.unassigned ? null : h("div", { class: "acts" }, isAuto ? [S.me !== a.person ? h("button", { class: "btn ghost sm", onclick: () => asWho(R.order.filter(p => p !== a.person), "Who's cooking tonight?", (p) => override(a, p, "claim")) }, "I'll cook") : null, cancelBtn(a, st)] : [].concat(acts(a, st, isActive), unclaimBtn(a, st) || [])));
       fx(t, a); markLate(t, a); longPress(t, () => sheetFor(a)); return t;
     })));
@@ -1630,9 +1634,7 @@
         un ? null : h("div", { style: "display:flex;gap:4px" }, claim ? [h("button", { class: "btn sm", onclick: () => asWho(claimers, "Who's folding?", (p) => override(a, p, "claim")) }, "Claim"), ...acts(a, st)] : acts(a, st)));
       fx(c, a); markLate(c, a); longPress(c, () => sheetFor(a)); (folded ? doneChips : chips).appendChild(c);
     }
-    { const open = shopOpenItems(), u = open.filter(x => isUrg(x)).length; const c = h("div", { class: "bchip " + (u ? "overdue" : "") }, h("div", {}, h("div", { class: "k" }, "🛒 Shopping"), h("b", {}, open.length + " items" + (u ? " · " + u + " urgent" : ""))), h("button", { class: "btn sm", onclick: shopSheet }, "Open list")); chips.appendChild(c); }
-    if (chips.children.length === 1 && todays.length) main.appendChild(sec("Today", h("div", {}, h("div", { class: "calmbar", style: "margin-bottom:8px" }, "✓ All of today's jobs are done"), chips)));
-    else main.appendChild(sec("Today", chips));
+    if (chips.children.length) main.appendChild(sec("Today", chips));
     if (doneChips.children.length) main.appendChild(foldBox("✓ Done today (" + doneChips.children.length + ")", [doneChips], "_boardDoneOpen"));
     main.appendChild(h("div", { class: "note", style: "text-align:right;font-size:11px" }, "Kitchen board · hold the 👤 pill to change this device"));
     const od = overdueList();
@@ -1738,6 +1740,7 @@
     todayList.sort((x, y) => rank(x) - rank(y));
     const byDay = {};
     for (const a of my) { if (todayList.includes(a)) continue; if (a.date && a.date < S.today) continue; const k = a.date || (a.window === "wknd" ? "weekend" : "this week"); (byDay[k] = byDay[k] || []).push(a); }
+    for (const z of my.filter(a => a.kind === "zone" && !a.carried)) for (let i = 1; i <= 6; i++) { const dd = E.addDays(S.today, i); if (dd > E.addDays(W.week, 6)) break; (byDay[dd] = byDay[dd] || []).unshift(Object.assign({}, z, { _zoneDay: dd })); }
     const keys = Object.keys(byDay).sort((x, y) => (x < y ? -1 : 1));
     { const ac = askCards(); if (ac) main.appendChild(ac); }
     { const sc = swapCards(); if (sc) main.appendChild(h("div", {}, h("div", { class: "label" }, "Swap requests"), sc)); }
@@ -1747,7 +1750,7 @@
       S._arrivalRow = h("div", { class: "li " + (on ? "done" : ""), style: "margin-top:10px;min-height:44px" }, h("div", {}, h("div", { class: "n", style: "font-size:14px" }, on ? "Home ✓" : "Arrival · tap when home"), h("div", { class: "s" }, "Hold for the steps")), h("button", { class: "btn quiet sm", onclick: () => arrival(S.me) }, on ? "Undo" : "I'm home"));
       longPress(S._arrivalRow, () => sheet(h("h3", {}, "Arrival"), h("p", {}, R.dod.arrival)));
     }
-    const row = (a) => { const st = state(a); const li = h("div", { class: "li " + (a.kind === "zone" && !a.carried && zoneToday(a) && st !== "overdue" ? "done" : st) }, h("div", {}, h("div", { class: "n" }, a.label + (a.carried ? " · from last week" : a.kind === "zone" ? " · every day" : "")), h("div", { class: "s" }, a.kind === "zone" && !a.carried ? zoneDaysTxt(a) : (sub(a, st) || (st === "future" ? "later" : ""))), h("div", { class: "s", style: "color:var(--ink)" }, R.short[a.chore] || "")), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end" }, a.kind === "zone" && !a.carried ? zoneActs(a) : acts(a, st))); fx(li, a); markLate(li, a, true); longPress(li, () => sheetFor(a)); return li; };
+    const row = (a) => { if (a._zoneDay) { const li = h("div", { class: "li future" }, h("div", {}, h("div", { class: "n" }, a.label + " · every day"), h("div", { class: "s" }, R.short[a.chore] || ""))); fx(li, a); return li; } const st = state(a); const li = h("div", { class: "li " + (a.kind === "zone" && !a.carried && zoneToday(a) && st !== "overdue" ? "done" : st) }, h("div", {}, h("div", { class: "n" }, a.label + (a.carried ? " · from last week" : a.kind === "zone" ? " · every day" : "")), h("div", { class: "s" }, a.kind === "zone" && !a.carried ? zoneDaysTxt(a) : (sub(a, st) || (st === "future" ? "later" : ""))), h("div", { class: "s", style: "color:var(--ink)" }, R.short[a.chore] || "")), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end" }, a.kind === "zone" && !a.carried ? zoneActs(a) : acts(a, st))); fx(li, a); markLate(li, a, true); longPress(li, () => sheetFor(a)); return li; };
     main.appendChild(h("div", {}, h("div", { class: "label", style: "color:var(--ink)" }, "Today · " + fmtDay(S.today)), h("div", { class: "list" }, ...(() => { const shopRows = (S.me === "Tata" && (shopOpenItems().some(x => isUrg(x)) || W.assignments.some(x => (x.chore === "shop" || x.chore === "costco") && (x.date === S.today || (!x.date && ["Sat", "Sun"].includes(E.dow(S.today)))))) ? [(() => { const open = shopOpenItems(); const li = h("div", { class: "li" + (open.some(x => isUrg(x)) ? " overdue" : "") }, h("div", {}, h("div", { class: "n" }, "🛒 Shopping list"), h("div", { class: "s" }, open.length + " to buy" + (open.some(x => isUrg(x)) ? " · " + open.filter(x => isUrg(x)).length + " urgent" : "") + (open.some(x => x.meal) ? " · " + open.filter(x => x.meal).length + " meal ideas" : ""))), h("button", { class: "btn", onclick: shopSheet }, "Open")); li.addEventListener("click", (e) => { if (e.target.tagName !== "BUTTON") shopSheet(); }); return li; })()] : []); const dr = null, late = false; const openT = todayList.filter(a => rank(a) < 3), doneT = todayList.filter(a => rank(a) >= 3); const rows = openT.map(row).concat(doneT.length ? [foldBox("✓ Done today (" + doneT.length + ")", doneT.map(row), "_doneOpen")] : []); const nLate = todayList.filter(lateOpen).length; // orange jobs above everything, even the 🛒 row (Mama, 5 Nov 22:08)
       return rows.slice(0, nLate).concat(late ? [dr] : [], shopRows, rows.slice(nLate), late || !dr ? [] : [dr]); })())));
     if (S._arrivalRow) { main.appendChild(S._arrivalRow); S._arrivalRow = null; }
