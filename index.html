@@ -1606,20 +1606,21 @@
     if (isMgr()) { const evs = steps; const allOff = evs.length && evs.every(x => S.done[x.id + ":skip"] || S.done[x.id]);
       main.appendChild(h("div", { style: "margin:-6px 0 10px" }, allOff && evs.some(x => S.done[x.id + ":skip"]) ? h("button", { class: "btn quiet sm", onclick: async () => { for (const x of evs) if (S.done[x.id + ":skip"]) await store.deleteDone(x.id + ":skip"); } }, "Dinner is back on") : h("button", { class: "btn quiet sm", style: "border-color:var(--red);color:var(--red)", onclick: noDinner }, "✕ No dinner tonight"))); }
     // 3. everything else as chips; done ones fade out after an hour
-    const chips = h("div", { class: "bchips" });
+    const chips = h("div", { class: "bchips" }), doneChips = h("div", { class: "bchips" });
     const fresh = (a) => { const dd = S.done[a.id]; return !dd || !dd.at || Date.now() - new Date(dd.at) < 3600000; };
     const todays = W.assignments.filter(a => (a.kind === "fixed" || (a.kind === "laundry" && !a.own)) && a.date === d);
     for (const a of todays) {
-      const st = state(a); if (st === "done" && !fresh(a)) continue;
+      const st = state(a); const folded = (st === "done" && !fresh(a)) || st === "cancelled";
       const un = a.unassigned && !S.done[a.id + ":override"];
       const claimers = a.kind === "laundry" ? (a.claimable || []).filter(p => p !== effPerson(a)) : [];
       const claim = st === "pending" && claimers.length;
       const c = h("div", { class: "bchip " + (un ? "unassigned" : claim ? "claim" : st) }, h("div", {}, h("div", { class: "k" }, a.label), h("b", {}, un ? (a.note || "not set") : R.people[effPerson(a)].label), h("div", { class: "s", style: "font-size:11px;color:var(--mute)" }, un ? "this week" : claim ? claimers.map(p => R.people[p].label).join(", ") + " can claim" : sub(a, st))),
         un ? null : h("div", { style: "display:flex;gap:4px" }, claim ? [h("button", { class: "btn sm", onclick: () => asWho(claimers, "Who's folding?", (p) => override(a, p, "claim")) }, "Claim"), ...acts(a, st)] : acts(a, st)));
-      fx(c, a); markLate(c, a); longPress(c, () => sheetFor(a)); chips.appendChild(c);
+      fx(c, a); markLate(c, a); longPress(c, () => sheetFor(a)); (folded ? doneChips : chips).appendChild(c);
     }
     { const open = shopOpenItems(), u = open.filter(x => isUrg(x)).length; const c = h("div", { class: "bchip " + (u ? "overdue" : "") }, h("div", {}, h("div", { class: "k" }, "🛒 Shopping"), h("b", {}, open.length + " items" + (u ? " · " + u + " urgent" : ""))), h("button", { class: "btn sm", onclick: shopSheet }, "Open list")); chips.appendChild(c); }
     main.appendChild(sec("Today", chips));
+    if (doneChips.children.length) main.appendChild(foldBox("✓ Done today (" + doneChips.children.length + ")", [doneChips], "_boardDoneOpen"));
     main.appendChild(h("div", { class: "note", style: "text-align:right;font-size:11px" }, "Kitchen board · hold the 👤 pill to change this device"));
     const od = overdueList();
     if (od.length) main.appendChild(h("div", { class: "redrow", style: "background:var(--red);color:#fff;border-radius:12px;padding:10px 14px;gap:16px;flex-wrap:wrap;font-size:14px" }, od.map(o => h("span", {}, h("b", {}, R.people[o.person].label), " · " + o.what))));
