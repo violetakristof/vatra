@@ -340,9 +340,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794155662"></script>
-<script src="./engine.js?v=1794155662"></script>
-<script>window.VATRA_BUILD="1794155662";</script>
+<script src="./rules.js?v=1794156119"></script>
+<script src="./engine.js?v=1794156119"></script>
+<script>window.VATRA_BUILD="1794156119";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1213,7 +1213,7 @@
     const by = (k) => w.filter(x => listOf(x) === k), nb = Object.values(runs).reduce((t, xs) => t + xs.length, 0);
     return h("div", {}, grp("🔴 Urgent", by("urgent")), grp("Costco", by("costco")), grp("Lufa", by("lufa")), nb ? foldBox("✓ Bought today (" + nb + ")", Object.keys(runs).map(p => runBlock(p, runs[p])), "_boughtOpen") : null);
   }
-  /* "Extra I bought with my money": kids only, with the details (price, where) on add (Mama, 8 Nov 11:31) */
+  /* "Extra I bought with my money": kids only, with the details (price) on add (Mama, 8 Nov 11:31) */
   const SHOP_KIDS = ["Maya", "Sofia", "Corvin"];
   function shopPane() {
     const flags = { list: "urgent", bought: false };
@@ -1221,16 +1221,15 @@
     const cb = {}; const box = h("input", { type: "checkbox" });
     const inStyle = "font:inherit;font-size:16px;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);min-width:0";
     const amt = h("input", { type: "text", inputmode: "decimal", placeholder: "$ paid", style: inStyle + ";width:96px" });
-    const where = h("input", { type: "text", placeholder: "Where (optional)", style: inStyle + ";flex:1" });
-    const det = h("div", { class: "extradet", style: "display:none;gap:8px;margin-top:8px" }, amt, where);
+    const det = h("div", { class: "extradet", style: "display:none;gap:8px;margin-top:8px" }, amt);
     const paint = () => { for (const [k] of cats) cb[k].className = "btn quiet sm" + (flags.list === k ? " on" : ""); };
     for (const [k, l] of cats) cb[k] = h("button", { class: "btn quiet sm", onclick: () => { flags.list = k; paint(); } }, l);
     paint(); box.addEventListener("change", () => { flags.bought = box.checked; det.style.display = box.checked ? "flex" : "none"; });
     const canExtra = isBoard() || SHOP_KIDS.includes(S.me);
     const onAdd = async (text, by) => { const now = new Date().toISOString(); const v = parseFloat(String(amt.value).replace(",", ".").replace(/[^0-9.]/g, ""));
       await store.writeShop(Object.assign({ id: "shop_" + Date.now(), text, by, at: now, date: S.today, status: "open", urgent: flags.list === "urgent", costco: flags.list === "costco", lufa: flags.list === "lufa", meal: false },
-        flags.bought ? { status: "bought", extra: true, ownMoney: true, boughtAt: now, boughtDate: S.today, boughtBy: by, amount: v >= 0 ? Math.round(v * 100) / 100 : null, where: where.value.trim() || null } : {}));
-      box.checked = false; flags.bought = false; amt.value = ""; where.value = ""; det.style.display = "none"; refreshShopSheet(); };
+        flags.bought ? { status: "bought", extra: true, ownMoney: true, boughtAt: now, boughtDate: S.today, boughtBy: by, amount: v >= 0 ? Math.round(v * 100) / 100 : null } : {}));
+      box.checked = false; flags.bought = false; amt.value = ""; det.style.display = "none"; refreshShopSheet(); };
     return h("div", {}, addRow("Add an item, e.g. oat milk ×2", onAdd,
       h("div", {}, h("div", { class: "shopcats" }, cats.map(([k]) => cb[k])), canExtra ? h("label", { class: "boughtbox", style: "margin:6px 0 0" }, box, " Extra I bought with my money") : null, det),
       () => flags.bought ? SHOP_KIDS : R.order), shopList());
