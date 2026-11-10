@@ -345,9 +345,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794343430"></script>
-<script src="./engine.js?v=1794343430"></script>
-<script>window.VATRA_BUILD="1794343430";</script>
+<script src="./rules.js?v=1794343691"></script>
+<script src="./engine.js?v=1794343691"></script>
+<script>window.VATRA_BUILD="1794343691";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1788,7 +1788,7 @@
   }
   function acts(a, st, full) {
     if (pastLocked(a)) return st === "done" || st === "cancelled" ? [] : [h("span", { class: "note" }, "🔒 closed at 6 am")];
-    const hasPomo = (x) => hasPomoBase(x) && (full || !!S.pomo[x.id]);
+    const hasPomo = (x) => hasPomoBase(x) && (full || !!S.pomo[x.id]); // 🍅 only in the long-press sheet (full) or while running (Mama, 10 Nov 15:45)
     const out = [];
     if (st === "cancelled") { const sk = S.done[skipId(a)]; if (isMgr() || (sk && sk.defer && sk.person === S.me)) out.push(h("button", { class: "btn quiet sm", onclick: () => unskipTile(a) }, sk && sk.defer ? "Undo skip" : "Restore")); return out; }
     { const lb = linenSkipBtn(a, st); if (lb) out.push(lb); }
@@ -1873,7 +1873,7 @@
         h("div", { class: "k" }, a.label),
         nameEl(a, a.unassigned && !S.done[a.id + ":override"] ? (a.note || "not set") : (R.people[effPerson(a)] || {}).label || "—"),
         mealLine(a), h("div", { class: "s" }, isAuto ? "Done by 8 pm" : sub(a, st)),
-        a.unassigned ? null : h("div", { class: "acts" }, isAuto ? [].concat(acts(a, st, isActive), S.me !== a.person ? [h("button", { class: "btn ghost sm", onclick: () => asWho(R.order.filter(p => p !== a.person), "Who's cooking tonight?", (p) => override(a, p, "claim")) }, "I'll cook")] : []) : [].concat(acts(a, st, isActive), unclaimBtn(a, st) || [])));
+        a.unassigned ? null : h("div", { class: "acts" }, isAuto ? [].concat(acts(a, st), S.me !== a.person ? [h("button", { class: "btn ghost sm", onclick: () => asWho(R.order.filter(p => p !== a.person), "Who's cooking tonight?", (p) => override(a, p, "claim")) }, "I'll cook")] : []) : [].concat(acts(a, st), unclaimBtn(a, st) || [])));
       fx(t, a); markLate(t, a); longPress(t, () => sheetFor(a)); mealMark(t, a); return t;
     })));
     { const settled = steps.length && steps.every(a => ["done", "cancelled", "passed"].includes(state(a)) || (a.auto && S.done[a.id])); if (settled) { chain.classList.add("calm"); main.appendChild(sec("Dinner organization", h("div", {}, (() => { const off = evSteps.some(x => S.done[x.id + ":skip"]) && !evSteps.some(x => S.done[x.id]); return h("div", { class: "calmbar" + (off ? " offbar" : ""), style: "margin-bottom:8px" }, off ? "✕ Dinner together cancelled for tonight" : "✓ Dinner done for tonight"); })(), chain))); } else if (evSteps.length && evSteps.every(x => S.done[x.id + ":skip"] || S.done[x.id]) && evSteps.some(x => S.done[x.id + ":skip"]) && !evSteps.some(x => S.done[x.id])) main.appendChild(sec("Dinner organization", h("div", {}, h("div", { class: "calmbar offbar", style: "margin-bottom:8px" }, "✕ Dinner together cancelled for tonight"), chain))); else main.appendChild(sec("Dinner organization", chain)); }
