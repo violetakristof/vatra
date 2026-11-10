@@ -126,7 +126,11 @@
   .li.done { background:var(--greenbg); border-color:var(--green); }
   .xbtn { color:var(--red) !important; border-color:var(--red) !important; min-width:36px; padding:0 8px; }
   .li.cancelled, .tile.cancelled { background:var(--soft); opacity:.6; }
-  .li.cancelled .n, .tile.cancelled .k { text-decoration:line-through; }
+  /* everything cancelled is crossed out: name, who, note, meal (Mama, 9 Nov 20:36) */
+  .li.cancelled .n, .li.cancelled .s, .tile.cancelled .k, .tile.cancelled .n, .tile.cancelled .s, .tile.cancelled .namebtn, .tile.cancelled .mealline,
+  .bstep.cancelled .k, .bstep.cancelled .n, .bstep.cancelled .s, .bstep.cancelled b, .bstep.cancelled .namebtn, .bstep.cancelled .mealline,
+  .bchip.cancelled .k, .bchip.cancelled b, .bchip.cancelled .s, .bzone.cancelled .k, .bzone.cancelled .n, .bzone.cancelled .namebtn, .bzone.cancelled .s { text-decoration:line-through; }
+  .bchip.cancelled, .bzone.cancelled { background:var(--soft); opacity:.6; }
   .li.overdue { border-color:var(--red); }
   .li.locked, .li.future { background:var(--soft); color:#8C857B; }
   .banner { background:var(--amberbg); border:1px solid var(--amber); color:var(--amberink); border-radius:10px; padding:10px 14px; font-size:14px; }
@@ -277,6 +281,7 @@
   .bchain .bstep.active .n, .bchain .bstep.active .namebtn { font-size:23px; }
   .bstep.active .btn:not(.pomo):not(.sm) { font-size:16px; padding:10px 14px; }
   .bchain.calm .bstep { min-height:0; } .bchain.calm .bstep .s { display:none; } .bchain.calm .bstep .n, .bchain.calm .bstep .namebtn { font-size:18px; }
+  .calmbar.offbar { background:var(--soft); border-color:var(--soft2); color:var(--mute); }
   .calmbar { background:var(--greenbg); border:1.5px solid var(--green); color:var(--green); border-radius:14px; padding:12px 16px; font-weight:700; font-size:16px; }
   .bstep.off { background:var(--soft); border-style:dashed; border-color:var(--soft2); opacity:.6; }
   .bstep { background:var(--card); border:1.5px solid var(--line); border-radius:16px; padding:12px 14px; display:flex; flex-direction:column; gap:4px; min-height:110px; position:relative; }
@@ -340,9 +345,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794156119"></script>
-<script src="./engine.js?v=1794156119"></script>
-<script>window.VATRA_BUILD="1794156119";</script>
+<script src="./rules.js?v=1794274768"></script>
+<script src="./engine.js?v=1794274768"></script>
+<script>window.VATRA_BUILD="1794274768";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1823,7 +1828,7 @@
     const st = state(a);
     const claimed = a.auto && S.done[a.id + ":override"];
     const isAuto = a.auto && !claimed && !S.done[a.id] && st !== "cancelled";
-    const t = h("div", { class: "tile " + (cls || "") + " " + (isAuto ? "auto" : st) + (S.running[a.id] ? " running" : "") },
+    const t = h("div", { class: "tile " + (cls || "") + " " + (isAuto ? "auto" : st) + (a.kind === "zone" && S.done[dayId(a) + ":skip"] ? " cancelled" : "") + (S.running[a.id] ? " running" : "") },
       h("div", { class: "k" }, a.label), nameEl(a, a.unassigned && !S.done[a.id + ":override"] ? (a.note || "not set") : (R.people[effPerson(a)] || {}).label || "—"), mealLine(a), h("div", { class: "s" }, isAuto ? "Done by 8 pm" : sub(a, st)), h("div", { class: "s", style: "color:var(--ink);margin-top:2px" }, R.short[a.chore] || ""),
       a.unassigned ? null : h("div", { class: "acts" }, isAuto ? [].concat(acts(a, st), S.me !== a.person ? [h("button", { class: "btn ghost", onclick: () => asWho(R.order.filter(p => p !== a.person), "Who's cooking tonight?", (p) => override(a, p, "claim")) }, "I'll cook")] : []) : [].concat(acts(a, st), unclaimBtn(a, st) || [])));
     fx(t, a); markLate(t, a);
@@ -1846,7 +1851,7 @@
       const st = state(a), k = dayId(a), today = zoneToday(a), sk = S.done[k + ":skip"];
       const mc = a.chore === "bathLight" ? messCount(W.week) : null;
       const mcTxt = mc && Object.keys(mc).length ? "mess: " + Object.keys(mc).map(p => R.people[p].label + " ×" + mc[p]).join(", ") : (a.note || "");
-      const z = h("div", { class: "bzone " + (today && st !== "overdue" ? "done" : st) },
+      const z = h("div", { class: "bzone " + (sk ? "cancelled" : today && st !== "overdue" ? "done" : st) },
         h("div", { class: "k" }, a.label), nameEl(a, R.people[effPerson(a)].label), DOTS(a),
         h("div", { class: "s" }, R.short[a.chore] || ""), mcTxt ? h("div", { class: "s", style: "color:var(--red)" }, mcTxt) : null,
         h("div", { class: "acts" }, st === "done" ? h("span", { class: "note" }, "week done") : sk ? [h("span", { class: "note" }, "today cancelled"), isMgr() ? h("button", { class: "btn quiet sm", onclick: () => unskipTile(a) }, "Restore") : null]
@@ -1871,7 +1876,7 @@
         a.unassigned ? null : h("div", { class: "acts" }, isAuto ? [].concat(acts(a, st, isActive), S.me !== a.person ? [h("button", { class: "btn ghost sm", onclick: () => asWho(R.order.filter(p => p !== a.person), "Who's cooking tonight?", (p) => override(a, p, "claim")) }, "I'll cook")] : []) : [].concat(acts(a, st, isActive), unclaimBtn(a, st) || [])));
       fx(t, a); markLate(t, a); longPress(t, () => sheetFor(a)); mealMark(t, a); return t;
     })));
-    { const settled = steps.length && steps.every(a => ["done", "cancelled", "passed"].includes(state(a)) || (a.auto && S.done[a.id])); if (settled) { chain.classList.add("calm"); main.appendChild(sec("Dinner organization", h("div", {}, h("div", { class: "calmbar", style: "margin-bottom:8px" }, "✓ Dinner done for tonight"), chain))); } else main.appendChild(sec("Dinner organization", chain)); }
+    { const settled = steps.length && steps.every(a => ["done", "cancelled", "passed"].includes(state(a)) || (a.auto && S.done[a.id])); if (settled) { chain.classList.add("calm"); main.appendChild(sec("Dinner organization", h("div", {}, (() => { const off = evSteps.some(x => S.done[x.id + ":skip"]) && !evSteps.some(x => S.done[x.id]); return h("div", { class: "calmbar" + (off ? " offbar" : ""), style: "margin-bottom:8px" }, off ? "✕ Dinner together cancelled for tonight" : "✓ Dinner done for tonight"); })(), chain))); } else if (evSteps.length && evSteps.every(x => S.done[x.id + ":skip"] || S.done[x.id]) && evSteps.some(x => S.done[x.id + ":skip"]) && !evSteps.some(x => S.done[x.id])) main.appendChild(sec("Dinner organization", h("div", {}, h("div", { class: "calmbar offbar", style: "margin-bottom:8px" }, "✕ Dinner together cancelled for tonight"), chain))); else main.appendChild(sec("Dinner organization", chain)); }
     if (isMgr()) { const evs = evSteps; const allOff = evs.length && evs.every(x => S.done[x.id + ":skip"] || S.done[x.id]);
       main.appendChild(h("div", { style: "margin:-6px 0 10px" }, allOff && evs.some(x => S.done[x.id + ":skip"]) ? h("button", { class: "btn quiet sm", onclick: async () => { for (const x of evs) if (S.done[x.id + ":skip"]) await store.deleteDone(x.id + ":skip"); } }, "Dinner is back on") : h("button", { class: "btn quiet sm", style: "border-color:var(--red);color:var(--red)", onclick: noDinner }, "✕ No dinner tonight"))); }
     // 3. everything else as chips; done ones fade out after an hour
