@@ -345,9 +345,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794274768"></script>
-<script src="./engine.js?v=1794274768"></script>
-<script>window.VATRA_BUILD="1794274768";</script>
+<script src="./rules.js?v=1794343286"></script>
+<script src="./engine.js?v=1794343286"></script>
+<script>window.VATRA_BUILD="1794343286";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1866,7 +1866,7 @@
     const dp = W.assignments.find(a => a.chore === "dishPrep" && a.date === d);
     const gb = W.assignments.find(a => a.chore === "garbage" && a.date === d);
     const steps = (dp ? [dp] : []).concat(evSteps).concat(gb ? [gb] : []);
-    const active = steps.find(a => !a.optional && ["pending", "overdue"].includes(state(a)) && !(a.auto && !S.done[a.id + ":override"]));
+    const active = steps.find(a => !a.optional && ["pending", "overdue"].includes(state(a))); // Chef counts too: it has its own Done now, so Dinner Service is not "Now" before dinner is cooked (Mama, 10 Nov 15:40)
     const chain = h("div", { class: "bchain" + (steps.length > 4 ? " five" : "") }, (dp ? [] : [h("div", { class: "bstep off" }, h("div", { class: "k" }, "Empty dishwasher + rack"), h("div", { class: "n", style: "color:var(--mute)" }, "—"), h("div", { class: "s" }, "no job on the weekend"))]).concat(steps.map(a => {
       const st = state(a), claimed = a.auto && S.done[a.id + ":override"], isAuto = a.auto && !claimed && !S.done[a.id] && st !== "cancelled", isActive = a === active;
       const t = h("div", { class: "bstep " + (isAuto ? "auto" : st) + (isActive ? " active" : "") + (S.pomo[a.id] ? " running" : "") },
