@@ -360,9 +360,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794422613"></script>
-<script src="./engine.js?v=1794422613"></script>
-<script>window.VATRA_BUILD="1794422613";</script>
+<script src="./rules.js?v=1794423531"></script>
+<script src="./engine.js?v=1794423531"></script>
+<script>window.VATRA_BUILD="1794423531";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1379,7 +1379,7 @@
     if (isBoard()) return null;
     const xs = S.asks.filter(x => x.gift && !x.forHouse && x.from === S.me && !x.thanked && x.date >= E.addDays(S.today, -3));
     if (!xs.length) return null;
-    return h("div", { style: "margin-bottom:10px" }, h("div", { class: "label" }, "🤲 Someone helped you"), h("div", { class: "list" }, xs.map(x => h("div", { class: "li done" }, h("div", {}, h("div", { class: "n" }, (R.people[x.to] || { label: x.to }).label + ": " + x.text), h("div", { class: "s" }, dayShort(x.date) + " · ~" + x.minutes + " min")),
+    return h("div", { style: "margin-bottom:10px" }, h("div", { class: "label" }, "🤲 Someone helped you"), h("div", { class: "list" }, xs.map(x => h("div", { class: "li done" }, h("div", {}, h("div", { class: "n" }, (R.people[x.to] || { label: x.to }).label + ": " + x.text), h("div", { class: "s" }, dayShort(x.date) + (x.minutes ? " · ~" + x.minutes + " min" : ""))),
       h("button", { class: "btn sm", onclick: () => store.writeAsk(Object.assign({}, x, { thanked: new Date().toISOString() })) }, "Thank you ❤️")))));
   }
   // ---------- 🎁 I'd like…: ask for a reward, the giver answers with a job ----------
@@ -1506,7 +1506,7 @@
   }
   function askTiles() {
     const from = E.addDays(S.today, -14);
-    return S.asks.filter(x => (x.status === "accepted" || x.status === "done") && x.date >= from).map(x => ({ id: "ask:" + x.id, askId: x.id, ask: true, kind: "ask", chore: "ask", label: x.text, person: x.to, date: x.date, due: x.date, minutes: x.minutes || 15, week: E.mondayOf(x.date), note: x.gift ? "🤲 kindness for " + (x.forHouse ? "the house" : (R.people[x.from] || { label: x.from }).label) : "asked by " + (R.people[x.from] || { label: x.from }).label + (x.reward ? " · 🎁 " + x.reward + (x.paidAt ? " (paid)" : x.status === "done" ? " (owed)" : "") : "") })).map(t => { const x = S.asks.find(y => y.id === t.askId);
+    return S.asks.filter(x => !x.help && (x.status === "accepted" || x.status === "done") && x.date >= from).map(x => ({ id: "ask:" + x.id, askId: x.id, ask: true, kind: "ask", chore: "ask", label: x.text, person: x.to, date: x.date, due: x.date, minutes: x.minutes || 15, week: E.mondayOf(x.date), note: x.gift ? "🤲 kindness for " + (x.forHouse ? "the house" : (R.people[x.from] || { label: x.from }).label) : "asked by " + (R.people[x.from] || { label: x.from }).label + (x.reward ? " · 🎁 " + x.reward + (x.paidAt ? " (paid)" : x.status === "done" ? " (owed)" : "") : "") })).map(t => { const x = S.asks.find(y => y.id === t.askId);
       // jobs that earn a reward show every day until done, due on their date (Mama, 5 Nov)
       if (x && x.reward && !x.gift && x.status === "accepted" && x.date > S.today) return Object.assign({}, t, { date: undefined, due: x.date, window: "week", earnBy: x.date });
       return t; });
@@ -1581,13 +1581,16 @@
       h("button", { class: "btn", onclick: async () => { const em = {}; for (const p of R.order) { const v = inps[p].value.trim(); if (v) em[p] = v; } await store.writeSettings({ emails: em }); closeSheet(); } }, "Save"));
     S.sheetKeep = true;
   }
-  function todoSheet(edit) {
+  function todoSheet(edit, pre) {
     const ex = edit && edit.id && edit.text ? edit : null; // onclick passes an Event
-    const st = { to: ex ? ex.to : (isBoard() ? null : S.me), date: ex ? ex.date || null : null, time: ex ? ex.time || null : null };
+    pre = !ex && pre && typeof pre === "object" ? pre : {};
+    const st = { to: ex ? ex.to : (pre.to || (isBoard() ? null : S.me)), date: ex ? ex.date || null : null, time: ex ? ex.time || null : null };
     const box = "width:100%;font:inherit;font-size:17px;padding:10px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);box-sizing:border-box";
     const inp = h("textarea", { rows: "2", placeholder: "e.g. take the return box to the post office", style: box + ";resize:none;line-height:1.35", enterkeyhint: "done" });
-    if (ex) inp.value = ex.text;
+    if (ex) inp.value = ex.text; else if (pre.text) inp.value = pre.text;
     inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } }); // Enter only closes the keyboard
+    // one form for everything (Mama, 11 Nov 13:56): off = a to-do on the list; on = a scored job (the old 🙋 Ask: minutes, Yes / No)
+    const jobSw = ex ? null : h("button", { class: "btn quiet sm", role: "switch", "aria-checked": "false", style: "align-self:flex-start", onclick: () => { closeSheet(); askSheet(null, { text: inp.value, to: st.to, date: st.date }); } }, "○ Counts as a job");
     const tmr = E.addDays(S.today, 1);
     const whoBtns = R.order.map(p => h("button", { class: "btn quiet sm", onclick: () => { st.to = p; paint(); } }, pdot(p), plabel(p)));
     const bNone = h("button", { class: "btn quiet sm", onclick: () => { st.date = null; st.time = null; paint(); } }, "No day");
@@ -1624,19 +1627,23 @@
       h("div", {}, h("div", { class: "label" }, "What"), inp),
       h("div", {}, h("div", { class: "label" }, "Who"), h("div", { class: "todowho" }, whoBtns)),
       h("div", {}, h("div", { class: "label" }, "When · optional"), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center" }, bNone, bToday, bTmr, dateInp), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px" }, h("span", { class: "note" }, "Time"), timeInp, bNoTime), whenLabel),
+      jobSw, jobSw ? h("p", { class: "note", style: "margin:0" }, "Off: it just goes on the list. On: it becomes a job with minutes.") : null,
       msg, sendBtn,
-      isMgr() ? h("button", { class: "btn quiet sm", style: "align-self:flex-start", onclick: emailsSheet }, "📧 Calendar emails") : null);
+      isMgr() ? h("button", { class: "btn quiet sm", style: "align-self:flex-start", onclick: emailsSheet }, "📧 Calendar emails") : null,
+      ex ? null : openAsksBox());
     S.sheetKeep = true;
   }
   const todoErrBanner = () => S.todoErr ? h("div", { class: "banner" }, "To-dos could not be saved: the family database needs one more permission. Tell Claude.") : null;
 
-  function askSheet(edit) {
+  function askSheet(edit, pre) {
     const ex = edit && edit.id && edit.text ? edit : null; // onclick passes an Event
-    const st = { from: ex ? ex.from : (isBoard() ? null : S.me), to: ex ? ex.to : null, when: ex ? ex.date : S.today, minutes: ex ? ex.minutes : 15 };
+    pre = !ex && pre && typeof pre === "object" ? pre : {};
+    const st = { from: ex ? ex.from : (isBoard() ? null : S.me), to: ex ? ex.to : null, when: ex ? ex.date : (pre.date || S.today), minutes: ex ? ex.minutes : 15 };
+    if (!ex && pre.to && pre.to !== st.from) st.to = pre.to;
     const box = "width:100%;font:inherit;font-size:16px;padding:10px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);box-sizing:border-box";
     const inp = h("input", { type: "text", placeholder: "e.g. bring the boxes up from the basement", style: box, enterkeyhint: "done" });
     const rewardInp = h("input", { type: "text", placeholder: "optional: $10, screen time, a ride Saturday...", style: box, enterkeyhint: "done" });
-    if (ex) { inp.value = ex.text; rewardInp.value = ex.reward || ""; }
+    if (ex) { inp.value = ex.text; rewardInp.value = ex.reward || ""; } else if (pre.text) inp.value = pre.text;
     for (const el of [inp, rewardInp]) el.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); el.blur(); } }); // Enter only closes the keyboard, never sends
     const paint = (btns, opts, key) => btns.forEach((b, i) => b.className = "btn " + (opts[i] === st[key] ? "" : "quiet") + " sm");
     const group = (opts, key, fmt) => { const btns = opts.map(o => h("button", { class: "btn quiet sm", onclick: () => { st[key] = o; paint(btns, opts, key); } }, fmt(o))); paint(btns, opts, key); return h("div", { style: "display:flex;gap:6px;flex-wrap:wrap" }, btns); };
@@ -1669,15 +1676,16 @@
       collectReward(reward, st.from);
       closeSheet();
     };
-    const sendBtn = h("button", { class: "btn", onclick: send }, ex ? "Save changes" : "Send ask");
-    sheet(h("h3", {}, ex ? "✏️ Edit ask" : "🙋 Ask someone"), ex ? null : askModes("ask"), ex ? null : openAsksBox(), h("p", { class: "note" }, "A one-off task. From Mama it goes straight into their Today; from anyone else they answer Yes or No. The minutes count for whoever does it."),
+    const sendBtn = h("button", { class: "btn", onclick: send }, ex ? "Save changes" : "Send");
+    const jobSw = ex ? null : h("button", { class: "btn sm", role: "switch", "aria-checked": "true", style: "align-self:flex-start", onclick: () => { closeSheet(); todoSheet(null, { text: inp.value, to: st.to, date: st.when }); } }, "● Counts as a job");
+    sheet(h("h3", {}, ex ? "✏️ Edit job" : "➕ New to-do"),
+      h("div", {}, h("div", { class: "label" }, "What"), inp),
       isBoard() && !ex ? h("div", {}, h("div", { class: "label" }, "From"), group(people, "from", p => R.people[p].label)) : null,
       h("div", {}, h("div", { class: "label" }, "Who"), group(people.filter(p => p !== st.from || isBoard()), "to", p => R.people[p].label)),
-      h("div", {}, h("div", { class: "label" }, "What"), inp),
       h("div", {}, h("div", { class: "label" }, "When"), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center" }, bToday, bTmr, dateInp, whenLabel)),
       h("div", {}, h("div", { class: "label" }, "About how long"), group([5, 15, 30, 60], "minutes", m => m + " min")),
-      h("div", {}, h("div", { class: "label" }, "🎁 Reward"), rewardInp, h("div", { class: "pick", style: "margin-top:6px" }, rewardList().map(x => h("button", { class: "btn quiet sm", onclick: () => { rewardInp.value = x.text; } }, x.text)))),
-      msg, h("div", { class: "sticky" }, sendBtn));
+      jobSw, h("p", { class: "note", style: "margin:0" }, "A job is a tile with minutes. From Mama it goes straight into their Today; from anyone else they answer Yes or No."),
+      msg, h("div", { class: "sticky" }, sendBtn), ex ? null : openAsksBox());
     S.sheetKeep = true;
   }
   const owed = (x) => x.reward && x.status === "done" && !x.paidAt;
@@ -1801,7 +1809,7 @@
     const u = shopOpenItems().filter(x => isUrg(x)).length;
     const acts = h("div", { class: "topbtns" }, me,
       isBoard() ? h("button", { class: "ibtn lbl", title: "New to-do", onclick: () => todoSheet() }, "➕ To-do") : null,
-      h("button", { class: "ibtn lbl", title: "Ask", onclick: askSheet }, "🙋 Ask"),
+      /* 🙋 Ask left the top bar: ➕ To-do has a "Counts as a job" switch instead (Mama, 11 Nov 13:56) */
       h("button", { class: "ibtn lbl" + (u ? " shopurg" : ""), title: "Shopping list", onclick: shopSheet }, u ? "🛒 Shop " + u + "!" : "🛒 Shop"),
       isBoard() ? null : h("button", { class: "ibtn aa", title: "Text size · " + Math.round(zoomNow() * 100) + "%", onclick: zoomNext }, "Aa"),
       h("button", { class: "ibtn", title: themeNow() === "dark" ? "Light mode" : "Dark mode", onclick: themeNext }, themeNow() === "dark" ? "☀️" : "🌙"));
@@ -1913,6 +1921,20 @@
     if (a.kind === "zone" && !a.carried) { const k = dayId(a); await store.writeDone(k, { id: k, daily: true, zone: a.id, chore: a.chore, person: who, owner, covered: true, minutes: 0, counts: false, date: S.today, week: a.week, at, by: S.me, label: a.label }); }
     else await store.writeDone(a.id, { id: a.id, chore: a.chore, person: who, owner, covered: true, minutes: a.minutes || 0, measured: null, date: a.date || S.today, week: a.week, at, by: S.me, label: a.label });
     await store.log({ type: "cover", chore: a.chore, label: a.label, owner, by: who, date: S.today });
+  }
+  // 🤲 Helped: someone offered a hand with another person's job (Mama, 11 Nov 13:55: covered = they had to, helped = they offered).
+  // The owner keeps the job and the credit, no miss. The helper gets no minutes: a thank-you card for the owner and a line under Kindness in the review.
+  async function helpTile(a, who) {
+    const owner = effPerson(a), now = new Date().toISOString(), id = "ask_" + Date.now();
+    await store.writeAsk({ id, gift: true, help: true, tile: a.id, from: owner, to: who, text: "helped with " + a.label, date: S.today, minutes: 0, status: "done", at: now, askedOn: S.today, doneAt: now, doneDate: S.today });
+    store.log({ type: "kindness", by: who, for: owner, text: "helped with " + a.label, minutes: 0, date: S.today });
+  }
+  function helpBtn(a) {
+    if (a.auto || a.unassigned || a.ask || pastLocked(a)) return null;
+    const owner = effPerson(a); if (!owner) return null;
+    const self = !isBoard() && !isMgr() && S.me !== owner;
+    const go = () => self ? helpTile(a, S.me).then(closeSheet) : pickWho(R.order.filter(p => p !== owner), "Who helped " + (R.people[owner] || { label: owner }).label + " with " + a.label + "?", (p) => helpTile(a, p));
+    return h("button", { class: "btn ghost", title: "Helped: offered a hand", onclick: go }, self ? "🤲 I helped with this" : "🤲 Someone helped with this");
   }
   const coverers = (a) => R.order.filter(p => p !== effPerson(a));
   function coverBtn(a, big) {
@@ -2241,7 +2263,7 @@
       if (cv.length) main.appendChild(sec("🛟 Covered", h("div", { class: "list" }, cv.map(d => h("div", { class: "li" }, h("div", {}, h("div", { class: "n" }, (R.people[d.person] || {}).label + " covered " + (R.people[d.owner] || {}).label + " · " + (d.label || d.chore)), h("div", { class: "s" }, dayShort(d.date) + " · counts as not done for " + (R.people[d.owner] || {}).label))))))); }
     // 🤲 kindness this week
     { const kd = S.asks.filter(x => x.gift && !x.deleted && E.mondayOf(x.date) === W.week).sort((a, b) => (a.at < b.at ? -1 : 1));
-      if (kd.length) main.appendChild(sec("🤲 Kindness", h("div", { class: "list" }, kd.map(x => h("div", { class: "li done" }, h("div", {}, h("div", { class: "n" }, (R.people[x.to] || { label: x.to }).label + " → " + (x.forHouse ? "the house" : (R.people[x.from] || { label: x.from }).label) + ": " + x.text), h("div", { class: "s" }, dayShort(x.date) + " · ~" + x.minutes + " min" + (x.thanked ? " · thanked ❤️" : ""))),
+      if (kd.length) main.appendChild(sec("🤲 Kindness", h("div", { class: "list" }, kd.map(x => h("div", { class: "li done" }, h("div", {}, h("div", { class: "n" }, (R.people[x.to] || { label: x.to }).label + " → " + (x.forHouse ? "the house" : (R.people[x.from] || { label: x.from }).label) + ": " + x.text), h("div", { class: "s" }, dayShort(x.date) + (x.minutes ? " · ~" + x.minutes + " min" : "") + (x.thanked ? " · thanked ❤️" : ""))),
         S.me === "Mama" ? h("button", { class: "btn quiet sm", title: "Remove", onclick: async () => { await store.deleteDone("ask:" + x.id); await store.deleteAsk(x.id); } }, "✕") : null))))); }
     // 🧽 messes found this week
     { const wm = S.mess.filter(m => !m.deleted && E.mondayOf(m.date) === W.week).sort((a, b) => (a.at < b.at ? -1 : 1));
@@ -2394,6 +2416,7 @@
     if (messArea(a) && !a.carried && (a.kind === "zone" || a.date === S.today)) { const mb = messBtn(a); if (mb) { mb.className = "btn quiet"; kids.push(mb); } }
     if (isMgr() && !a.ask && a.chore) kids.push(h("button", { class: "btn quiet sm", onclick: () => textSheet(a) }, "✎ Edit description"));
     { const zoneDone = a.kind === "zone" && !a.carried && S.done[dayId(a)]; if (st !== "done" && st !== "cancelled" && !zoneDone && !skipped(a)) { const cb = coverBtn(a, true); if (cb) kids.push(cb, h("p", { class: "note" }, "Covered = you did it because it had to be done. The minutes go to you; for " + ((R.people[effPerson(a)] || {}).label || "them") + " it counts as not done tonight.")); } }
+    if (st !== "cancelled" && !skipped(a)) { const hb = helpBtn(a); if (hb) kids.push(hb, h("p", { class: "note" }, "Helped = they offered. " + ((R.people[effPerson(a)] || {}).label || "The owner") + " keeps the job and the credit; the helper gets a thank-you and a line in the review.")); }
     if (!isBoard() && effPerson(a) === S.me && swapOpen(a) && R.pool.includes(S.me)) kids.push(h("button", { class: "btn ghost", onclick: () => swapSheet(a) }, "Ask someone to swap"));
     if (!a.auto && !a.unassigned) kids.push(h("div", { class: "pick" }, acts(a, st, true)));
     if (st === "done") { const d = S.done[a.id] || {}; kids.push(h("p", { class: "note" }, "Counts ~" + (d.minutes || a.minutes) + " min (standard)" + (d.focus ? " · 🍅 " + d.focus + " min" : "") + (d.real ? " · took ~" + d.real + " min" : "")));
