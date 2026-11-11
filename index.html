@@ -340,6 +340,13 @@
   body.hasfab .main { padding-bottom:88px; }
   .pdot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; flex:0 0 auto; }
   .todorow { border-left-width:5px; }
+  /* 🔴 urgent to-dos (Mama, 11 Nov 14:14): red frame, first on the list, a red block at the top of Mine. Still not part of the game. */
+  .todorow.urgent { border-color:var(--red); } .todorow.urgent .chk { border-color:var(--red); }
+  .btodo .todorow.urgent { border-left-color:var(--red) !important; }
+  .todourg { border:2px solid var(--red); border-radius:14px; padding:10px; display:flex; flex-direction:column; gap:8px; }
+  .todourg .label { color:var(--red); margin:0; }
+  .urgon { background:var(--red) !important; border-color:var(--red) !important; color:#fff !important; }
+  body.board .todofab { min-height:60px; font-size:19px; padding:0 26px; }
   .todorow > .stxt .swho { display:block; margin-left:0 !important; margin-top:1px; }
   .todowho { display:flex; gap:6px; flex-wrap:wrap; }
   .todowho button { display:inline-flex; align-items:center; }
@@ -360,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794423531"></script>
-<script src="./engine.js?v=1794423531"></script>
-<script>window.VATRA_BUILD="1794423531";</script>
+<script src="./rules.js?v=1794424617"></script>
+<script src="./engine.js?v=1794424617"></script>
+<script>window.VATRA_BUILD="1794424617";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1528,15 +1535,16 @@
   const fmtTime = (t) => { if (!t) return ""; const [hh, mm] = t.split(":").map(Number); return ((hh + 11) % 12 + 1) + ":" + String(mm).padStart(2, "0") + (hh < 12 ? " am" : " pm"); };
   const todoDay = (d) => d === S.today ? "today" : d === E.addDays(S.today, 1) ? "tomorrow" : new Date(d + "T12:00").toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" });
   const todoWhen = (x) => !x.date ? "" : (x.time ? (x.cal ? "📅 " : "🕓 ") : "") + todoDay(x.date) + (x.time ? " " + fmtTime(x.time) : "");
-  const todoKey = (x) => (x.status === "done" ? "2" : x.date ? "0" + x.date + (x.time || "99:99") : "1") + (x.at || "");
+  const todoKey = (x) => (x.status === "done" ? "3" : x.urgent ? "0" : x.date ? "1" + x.date + (x.time || "99:99") : "2") + (x.at || "");
+  const isUrgTodo = (x) => !!x.urgent && x.status !== "done";
   const todosOf = (p) => S.todos.filter(x => x.to === p && (x.status !== "done" || x.doneDate === S.today)).sort((a, b) => (todoKey(a) < todoKey(b) ? -1 : 1));
   const todoToggle = (x) => store.writeTodo(x.status === "done" ? Object.assign({}, x, { status: "open", doneAt: null, doneDate: null, doneBy: null }) : Object.assign({}, x, { status: "done", doneAt: new Date().toISOString(), doneDate: S.today, doneBy: isBoard() ? x.to : S.me }));
   function todoRow(x) {
     const done = x.status === "done";
-    const subTxt = [x.from && x.from !== x.to ? "from " + plabel(x.from) : null, todoWhen(x)].filter(Boolean).join(" · ");
-    const row = h("div", { class: "li shoprow todorow" + (done ? " done" : ""), style: "border-left-color:" + (PCOL[x.to] || "var(--line)"), role: "checkbox", "aria-checked": done ? "true" : "false" },
+    const by = x.from && x.from !== x.to ? x.from : null, wh = todoWhen(x);
+    const row = h("div", { class: "li shoprow todorow" + (done ? " done" : "") + (isUrgTodo(x) ? " urgent" : ""), style: "border-left-color:" + (PCOL[x.to] || "var(--line)"), role: "checkbox", "aria-checked": done ? "true" : "false" },
       h("div", { class: "chk" + (done ? " on" : "") }, done ? "✓" : ""),
-      h("div", { class: "stxt" }, x.text, subTxt ? h("span", { class: "swho" }, subTxt) : null),
+      h("div", { class: "stxt" }, (isUrgTodo(x) ? "🔴 " : "") + x.text, by || wh ? h("span", { class: "swho" }, by ? [pdot(by), "from " + plabel(by)] : null, by && wh ? " · " : null, wh || null) : null),
       isBoard() ? null : h("button", { class: "more", title: "Edit, calendar or delete", onclick: (e) => { e.stopPropagation(); todoMenu(x); } }, "⋯"));
     // phones: tap the row to cross it off, ⋯ for the rest. Board (narrow columns): tap the circle to cross off, tap the words for the rest.
     row.addEventListener("click", (e) => { if (e.target.closest("button,input,select,a")) return; if (isBoard() && !e.target.closest(".chk")) todoMenu(x); else todoToggle(x); });
@@ -1570,6 +1578,7 @@
     const canDel = isBoard() || isMgr() || x.from === S.me || x.to === S.me;
     sheet(h("h3", {}, x.text), h("p", { class: "note" }, [plabel(x.to) + "'s list", x.from && x.from !== x.to ? "from " + plabel(x.from) : null, todoWhen(x)].filter(Boolean).join(" · ")),
       h("button", { class: "btn", onclick: () => todoSheet(x) }, "✏️ Edit"),
+      x.status === "done" ? null : h("button", { class: "btn quiet", onclick: () => { closeSheet(); store.writeTodo(Object.assign({}, x, { urgent: !x.urgent })); } }, x.urgent ? "Not urgent any more" : "🔴 Mark urgent"),
       x.date && x.time ? calBox(x) : null,
       canDel ? h("button", { class: "btn quiet", style: "color:var(--red);border-color:var(--red)", onclick: () => { closeSheet(); store.deleteTodo(x.id); } }, "✕ Delete") : null);
   }
@@ -1584,15 +1593,17 @@
   function todoSheet(edit, pre) {
     const ex = edit && edit.id && edit.text ? edit : null; // onclick passes an Event
     pre = !ex && pre && typeof pre === "object" ? pre : {};
-    const st = { to: ex ? ex.to : (pre.to || (isBoard() ? null : S.me)), date: ex ? ex.date || null : null, time: ex ? ex.time || null : null };
+    const st = { to: ex ? ex.to : (pre.to || (isBoard() ? null : S.me)), date: ex ? ex.date || null : null, time: ex ? ex.time || null : null, urgent: ex ? !!ex.urgent : false, from: ex ? ex.from || null : (isBoard() ? null : S.me) };
     const box = "width:100%;font:inherit;font-size:17px;padding:10px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);box-sizing:border-box";
     const inp = h("textarea", { rows: "2", placeholder: "e.g. take the return box to the post office", style: box + ";resize:none;line-height:1.35", enterkeyhint: "done" });
     if (ex) inp.value = ex.text; else if (pre.text) inp.value = pre.text;
     inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } }); // Enter only closes the keyboard
     // one form for everything (Mama, 11 Nov 13:56): off = a to-do on the list; on = a scored job (the old 🙋 Ask: minutes, Yes / No)
-    const jobSw = ex ? null : h("button", { class: "btn quiet sm", role: "switch", "aria-checked": "false", style: "align-self:flex-start", onclick: () => { closeSheet(); askSheet(null, { text: inp.value, to: st.to, date: st.date }); } }, "○ Counts as a job");
+    const jobSw = ex ? null : h("button", { class: "btn quiet sm", role: "switch", "aria-checked": "false", onclick: () => { closeSheet(); askSheet(null, { text: inp.value, to: st.to, date: st.date }); } }, "○ Counts as a job");
     const tmr = E.addDays(S.today, 1);
     const whoBtns = R.order.map(p => h("button", { class: "btn quiet sm", onclick: () => { st.to = p; paint(); } }, pdot(p), plabel(p)));
+    const askFrom = isBoard() && !(ex && ex.from); // the Board belongs to nobody, so it asks who is adding it
+    const fromBtns = R.order.map(p => h("button", { class: "btn quiet sm", onclick: () => { st.from = p; paint(); } }, pdot(p), plabel(p)));
     const bNone = h("button", { class: "btn quiet sm", onclick: () => { st.date = null; st.time = null; paint(); } }, "No day");
     const bToday = h("button", { class: "btn quiet sm", onclick: () => { st.date = S.today; paint(); } }, "Today");
     const bTmr = h("button", { class: "btn quiet sm", onclick: () => { st.date = tmr; paint(); } }, "Tomorrow");
@@ -1603,10 +1614,13 @@
     const whenLabel = h("p", { class: "note", style: "margin:0" }, "");
     const msg = h("p", { class: "note", style: "color:var(--red);margin:0" }, "");
     const sendBtn = h("button", { class: "btn" }, "");
+    const bUrg = h("button", { class: "btn quiet sm", role: "switch", onclick: () => { st.urgent = !st.urgent; paint(); } }, "🔴 Urgent");
     function paint() {
       whoBtns.forEach((b, i) => b.className = "btn " + (R.order[i] === st.to ? "" : "quiet") + " sm");
+      fromBtns.forEach((b, i) => b.className = "btn " + (R.order[i] === st.from ? "" : "quiet") + " sm");
       bNone.className = "btn " + (!st.date ? "" : "quiet") + " sm"; bToday.className = "btn " + (st.date === S.today ? "" : "quiet") + " sm"; bTmr.className = "btn " + (st.date === tmr ? "" : "quiet") + " sm";
       dateInp.value = st.date || ""; timeInp.value = st.time || ""; bNoTime.style.display = st.time ? "" : "none";
+      bUrg.className = "btn sm " + (st.urgent ? "urgon" : "quiet"); bUrg.setAttribute("aria-checked", st.urgent ? "true" : "false");
       whenLabel.textContent = st.time ? "→ " + fmtDay(st.date) + ", " + fmtTime(st.time) + " · also goes in the calendar" : st.date ? "→ " + fmtDay(st.date) + " · add a time to put it in the calendar too" : "No day: it just waits on the list.";
       sendBtn.textContent = ex ? "Save changes" : !st.to ? "Add to a list" : st.to === S.me ? "Add to my list" : "Add to " + plabel(st.to) + "'s list";
     }
@@ -1614,20 +1628,23 @@
     sendBtn.onclick = async () => {
       const text = inp.value.trim();
       if (!text) { msg.textContent = "Write what needs doing."; inp.focus(); return; }
+      if (askFrom && !st.from) { msg.textContent = "Pick who it is from."; return; }
       if (!st.to) { msg.textContent = "Pick whose list it goes on."; return; }
       if (sending) return; sending = true;
       const whenChanged = ex && ((ex.date || null) !== st.date || (ex.time || null) !== st.time);
-      const x = ex ? Object.assign({}, ex, { text, to: st.to, date: st.date, time: st.time, cal: whenChanged || ex.to !== st.to ? null : ex.cal || null, editedAt: new Date().toISOString() })
-        : { id: "todo_" + Date.now(), text, to: st.to, from: isBoard() ? null : S.me, date: st.date, time: st.time, status: "open", at: new Date().toISOString(), cal: null };
+      const x = ex ? Object.assign({}, ex, { text, to: st.to, from: st.from, date: st.date, time: st.time, urgent: st.urgent, cal: whenChanged || ex.to !== st.to ? null : ex.cal || null, editedAt: new Date().toISOString() })
+        : { id: "todo_" + Date.now(), text, to: st.to, from: st.from, date: st.date, time: st.time, urgent: st.urgent, status: "open", at: new Date().toISOString(), cal: null };
       await store.writeTodo(x);
       if (x.time && !x.cal) calStep(x, !!(whenChanged && ex.cal)); else closeSheet();
     };
     paint();
     sheet(h("h3", {}, ex ? "✏️ Edit to-do" : "➕ New to-do"),
       h("div", {}, h("div", { class: "label" }, "What"), inp),
+      askFrom ? h("div", {}, h("div", { class: "label" }, "From"), h("div", { class: "todowho" }, fromBtns)) : null,
       h("div", {}, h("div", { class: "label" }, "Who"), h("div", { class: "todowho" }, whoBtns)),
       h("div", {}, h("div", { class: "label" }, "When · optional"), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center" }, bNone, bToday, bTmr, dateInp), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px" }, h("span", { class: "note" }, "Time"), timeInp, bNoTime), whenLabel),
-      jobSw, jobSw ? h("p", { class: "note", style: "margin:0" }, "Off: it just goes on the list. On: it becomes a job with minutes.") : null,
+      h("div", { style: "display:flex;gap:6px;flex-wrap:wrap" }, bUrg, jobSw),
+      h("p", { class: "note", style: "margin:0" }, "Urgent: red, first on the list." + (jobSw ? " Counts as a job: it becomes a tile with minutes instead." : "")),
       msg, sendBtn,
       isMgr() ? h("button", { class: "btn quiet sm", style: "align-self:flex-start", onclick: emailsSheet }, "📧 Calendar emails") : null,
       ex ? null : openAsksBox());
@@ -1778,9 +1795,9 @@
     const od = overdueList();
     if (od.length) body.appendChild(redColumn(od));
     app.appendChild(body);
-    // ➕ To-do: floating on phones (always under the thumb), in the top bar on the Board (Mama, 11 Nov)
-    const fab = !isBoard(); document.body.classList.toggle("hasfab", fab);
-    if (fab) app.appendChild(h("button", { class: "todofab", onclick: () => todoSheet() }, "➕ To-do"));
+    // ➕ To-do floats at the bottom right on every device, the Board too (Mama, 11 Nov 14:14)
+    document.body.classList.add("hasfab");
+    app.appendChild(h("button", { class: "todofab", onclick: () => todoSheet() }, "➕ To-do"));
   }
 
   function whoScreen() {
@@ -1808,7 +1825,6 @@
     const me = S.me ? (() => { const sw = () => { localStorage.removeItem("vatra.me"); S.me = null; render(); }; const b = h("button", { class: "mepill", title: isBoard() ? "Hold to change this device" : "Switch person", onclick: isBoard() ? null : sw }, "👤 " + ((R.people[S.me] || {}).label || "Kitchen board"), isBoard() ? null : h("span", { class: "swl" }, " · switch")); if (isBoard()) longPress(b, sw); return b; })() : null;
     const u = shopOpenItems().filter(x => isUrg(x)).length;
     const acts = h("div", { class: "topbtns" }, me,
-      isBoard() ? h("button", { class: "ibtn lbl", title: "New to-do", onclick: () => todoSheet() }, "➕ To-do") : null,
       /* 🙋 Ask left the top bar: ➕ To-do has a "Counts as a job" switch instead (Mama, 11 Nov 13:56) */
       h("button", { class: "ibtn lbl" + (u ? " shopurg" : ""), title: "Shopping list", onclick: shopSheet }, u ? "🛒 Shop " + u + "!" : "🛒 Shop"),
       isBoard() ? null : h("button", { class: "ibtn aa", title: "Text size · " + Math.round(zoomNow() * 100) + "%", onclick: zoomNext }, "Aa"),
@@ -2060,7 +2076,7 @@
     if (chips.children.length) main.appendChild(sec("Today", chips));
     if (doneChips.children.length) main.appendChild(foldBox("✓ Done today (" + doneChips.children.length + ")", [doneChips], "_boardDoneOpen"));
     { const eb = todoErrBanner(); if (eb) main.appendChild(eb);
-      main.appendChild(sec("To-do · so we don't forget", h("div", { class: "btodo" }, R.order.map(p => { const tl = todosOf(p); return h("div", { class: "col", style: "border-top-color:" + PCOL[p] }, h("div", { class: "pn" }, pdot(p), plabel(p)), tl.length ? tl.map(todoRow) : h("div", { class: "note", style: "padding:0 2px" }, "—")); })))); }
+      main.appendChild(sec("To-do · so we don't forget", h("div", { class: "btodo" }, R.order.map(p => { const tl = todosOf(p); return h("div", { class: "col", style: "border-top-color:" + PCOL[p] }, h("div", { class: "pn" }, pdot(p), plabel(p), tl.some(isUrgTodo) ? h("span", { style: "margin-left:auto;color:var(--red);font-size:14px" }, "🔴 " + tl.filter(isUrgTodo).length) : null), tl.length ? tl.map(todoRow) : h("div", { class: "note", style: "padding:0 2px" }, "—")); })))); }
     main.appendChild(h("div", { class: "note", style: "text-align:right;font-size:11px" }, "Kitchen board · hold the 👤 pill to change this device"));
     const od = overdueList();
     if (od.length) main.appendChild(h("div", { class: "redrow", style: "background:var(--red);color:#fff;border-radius:12px;padding:10px 14px;gap:16px;flex-wrap:wrap;font-size:14px" }, od.map(o => h("span", {}, h("b", {}, R.people[o.person].label), " · " + o.what))));
@@ -2151,6 +2167,7 @@
       else if (r === null && freeNight(S.me, S.today)) { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "All done tonight ✨", h("div", { style: "font-size:13px;font-weight:500" }, "Nothing due tonight · " + fireTxt(S.me) + " this week"))); confetti("me:" + S.me + ":" + S.today); }
       else if (r === "late") main.appendChild(h("div", { class: "note", style: "margin-bottom:8px" }, "Done ✓ · but late, so tonight doesn't count for " + fireTxt(S.me) + "."));
       else if (r === "open") main.appendChild(h("div", { class: "note", style: "margin-bottom:8px" }, fireTxt(S.me) + " this week · " + (nightTiles(S.today).some(t => t.p === S.me && t.a.chore === "cook") && chefCut(S.me, S.today) === CHEF_BY ? (S.me === "Tata" ? "Chef done by 8 pm" : "Chef done by 8 pm, the rest before 10 pm,") : "finish everything before 10 pm") + " to add tonight.")); }
+    { const ur = todosOf(S.me).filter(isUrgTodo); if (ur.length) main.appendChild(h("div", { class: "todourg" }, h("div", { class: "label" }, "🔴 Urgent · " + ur.length), ur.map(todoRow))); }
     { const wc = wishCards(); if (wc) main.appendChild(wc); }
     { const kc = kindCards(); if (kc) main.appendChild(kc); }
     { const mc = messCards(); if (mc) main.appendChild(mc); }
@@ -2177,8 +2194,8 @@
     const row = (a) => { if (a._zoneDay) { const li = h("div", { class: "li future" }, h("div", {}, h("div", { class: "n" }, a.label + " · every day"), h("div", { class: "s" }, R.short[a.chore] || ""))); fx(li, a); return li; } const st = state(a); const li = h("div", { class: "li " + (a.kind === "zone" && !a.carried && zoneToday(a) && st !== "overdue" ? "done" : st) }, h("div", {}, h("div", { class: "n" }, a.label + (a.carried ? " · from last week" : a.kind === "zone" ? " · every day" : "")), mealLine(a), h("div", { class: "s" }, a.kind === "zone" && !a.carried ? zoneDaysTxt(a) : (sub(a, st) || (st === "future" ? "later" : ""))), h("div", { class: "s", style: "color:var(--ink)" }, R.short[a.chore] || "")), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end" }, a.kind === "zone" && !a.carried ? zoneActs(a) : acts(a, st))); fx(li, a); markLate(li, a, true); longPress(li, () => sheetFor(a)); mealMark(li, a); return li; };
     main.appendChild(h("div", {}, h("div", { class: "label", style: "color:var(--ink)" }, "Today · " + fmtDay(S.today)), h("div", { class: "list" }, ...(() => { const shopRows = (S.me === "Tata" && (shopOpenItems().some(x => isUrg(x)) || W.assignments.some(x => (x.chore === "shop" || x.chore === "costco") && (x.date === S.today || shopFri(x, S.today) || (!x.date && ["Sat", "Sun"].includes(E.dow(S.today)))))) ? [(() => { const open = shopOpenItems(); const li = h("div", { class: "li" + (open.some(x => isUrg(x)) ? " overdue" : "") }, h("div", {}, h("div", { class: "n" }, "🛒 Shopping list"), h("div", { class: "s" }, open.length + " to buy" + (open.some(x => isUrg(x)) ? " · " + open.filter(x => isUrg(x)).length + " urgent" : "") + (open.some(x => x.meal) ? " · " + open.filter(x => x.meal).length + " meal ideas" : ""))), h("button", { class: "btn", onclick: shopSheet }, "Open")); li.addEventListener("click", (e) => { if (e.target.tagName !== "BUTTON") shopSheet(); }); return li; })()] : []); const dr = null, late = false; const openT = todayList.filter(a => rank(a) < 3), doneT = todayList.filter(a => rank(a) >= 3); const rows = openT.map(row).concat(doneT.length ? [foldBox("✓ Done today (" + doneT.length + ")", doneT.map(row), "_doneOpen")] : []); const nLate = todayList.filter(lateOpen).length; // orange jobs above everything, even the 🛒 row (Mama, 5 Nov 22:08)
       return rows.slice(0, nLate).concat(late ? [dr] : [], shopRows, rows.slice(nLate), late || !dr ? [] : [dr]); })())));
-    { const tl = todosOf(S.me), nOpen = tl.filter(x => x.status !== "done").length, eb = todoErrBanner(); if (eb) main.appendChild(eb);
-      main.appendChild(h("div", {}, h("div", { class: "label", style: "color:var(--ink)" }, "To-do" + (nOpen ? " · " + nOpen : "")), tl.length ? h("div", { class: "list" }, tl.map(todoRow)) : h("div", { class: "note" }, "Nothing to remember. ➕ To-do adds one, for you or for someone else."))); }
+    { const all = todosOf(S.me), nOpen = all.filter(x => x.status !== "done").length, tl = all.filter(x => !isUrgTodo(x)), eb = todoErrBanner(); if (eb) main.appendChild(eb);
+      main.appendChild(h("div", {}, h("div", { class: "label", style: "color:var(--ink)" }, "To-do" + (nOpen ? " · " + nOpen : "")), tl.length ? h("div", { class: "list" }, tl.map(todoRow)) : h("div", { class: "note" }, all.length ? "The rest is clear. Urgent ones are at the top." : "Nothing to remember. ➕ To-do adds one, for you or for someone else."))); }
     if (S._arrivalRow) { main.appendChild(S._arrivalRow); S._arrivalRow = null; }
     if (keys.length) main.appendChild(h("div", { style: "margin-top:18px;border-top:1px solid var(--line);padding-top:10px" }, foldBox("Later this week (" + keys.reduce((n, k) => n + byDay[k].length, 0) + ")", keys.map(k => { const list = h("div", { class: "list" }); for (const a of byDay[k]) list.appendChild(row(a)); return h("div", {}, h("div", { class: "label", style: "font-size:11px" }, k === "weekend" || k === "this week" ? k : fmtDay(k)), list); }), "_laterOpen")));
     // away days: small, at the bottom, folded
