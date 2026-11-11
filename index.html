@@ -367,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794424617"></script>
-<script src="./engine.js?v=1794424617"></script>
-<script>window.VATRA_BUILD="1794424617";</script>
+<script src="./rules.js?v=1794426933"></script>
+<script src="./engine.js?v=1794426933"></script>
+<script>window.VATRA_BUILD="1794426933";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1557,13 +1557,16 @@
     const s = new Date(x.date + "T" + x.time + ":00"), e = new Date(s.getTime() + 3600000);
     const q = ["action=TEMPLATE", "text=" + encodeURIComponent(x.text), "dates=" + f(s) + "/" + f(e), "ctz=America/Toronto", "details=" + encodeURIComponent("Vatra to-do for " + plabel(x.to) + ". Cross it off in Vatra.")];
     const g = calGuest(x); if (g) q.push("add=" + encodeURIComponent(g));
+    // open it in the Google account of this device's owner, not whichever account the browser has first (Mama, 11 Nov 14:49; tested: authuser=email works)
+    const au = (S.settings.emails || {})[S.me]; if (au) q.push("authuser=" + encodeURIComponent(au));
     return "https://calendar.google.com/calendar/render?" + q.join("&");
   }
   function calBox(x) {
     const g = calGuest(x), noMail = x.to !== S.me && !g;
     const link = h("a", { class: "btn", href: calUrl(x), target: "_blank", rel: "noopener", style: "display:flex;align-items:center;justify-content:center;text-decoration:none", onclick: () => { store.writeTodo(Object.assign({}, x, { cal: { by: S.me, at: new Date().toISOString() } })); closeSheet(); } }, "📅 Add to Google Calendar");
     return h("div", { style: "display:flex;flex-direction:column;gap:8px" }, link,
-      h("p", { class: "note", style: "margin:0" }, noMail ? "No email saved for " + plabel(x.to) + ", so no invitation will be sent." : g ? plabel(x.to) + " gets an invitation. Check it, then tap Save in the calendar." : "It opens in your calendar. Check it, then tap Save."),
+      h("p", { class: "note", style: "margin:0" }, isBoard() ? "It opens in whichever Google account this tablet uses" + (g ? ", with " + plabel(x.to) + " as guest." : ".") + " Better done from a phone."
+        : "This device is " + plabel(S.me) + "'s, so it opens in " + plabel(S.me) + "'s calendar" + (g ? " and invites " + plabel(x.to) + ". In the calendar tap Save, then Send." : x.to === S.me ? ", with no guest. To send it from someone else's calendar, switch person at the top first." : ". No email is saved for " + plabel(x.to) + ", so no invitation will be sent.")),
       noMail && isMgr() ? h("button", { class: "btn quiet sm", onclick: emailsSheet }, "📧 Set the calendar emails") : null,
       x.cal ? h("p", { class: "note", style: "margin:0" }, "Already added" + (x.cal.by && R.people[x.cal.by] ? " by " + plabel(x.cal.by) : "") + ".") : null);
   }
