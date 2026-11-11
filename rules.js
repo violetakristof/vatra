@@ -119,7 +119,7 @@ window.VATRA_RULES = {
     souschef: "Help Tata cook. Pass if you can't.",
     dishes: "After dinner: pick up and clear the table, scrape, load and run the dishwasher, wash pots, leftovers away, kitchen garbage out.",
     finisher: "After Dinner Service: counters and sink shining, stove top, sweep, chairs in, pack everyone's lunches for tomorrow.",
-    arrival: "Coat and shoes in their places, bag unpacked, papers in the paper box, containers in the dishwasher, dirty clothes in the basket, clean ones hung or put away.",
+    arrival: "Coat and shoes in their places, bag unpacked, papers in the paper box, containers in the dishwasher, dirty clothes in the basket, clean clothes hung or put away.",
     bathLight: "Daily: sink and counter wiped, towels hung, toilet quick wipe, floor clear.",
     entryways: "Daily: shoes downstairs, cubbies and mirror shelf upstairs, paper box scanned into the inbox.",
     common: "Every evening: dining and hallways back to baseline.",

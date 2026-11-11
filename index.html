@@ -367,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794426933"></script>
-<script src="./engine.js?v=1794426933"></script>
-<script>window.VATRA_BUILD="1794426933";</script>
+<script src="./rules.js?v=1794441439"></script>
+<script src="./engine.js?v=1794441439"></script>
+<script>window.VATRA_BUILD="1794441439";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -772,7 +772,18 @@
     // already done? the minutes move with it (Mama, 7 Nov 21:55)
     const d = S.done[a.id]; if (d && !d.deleted && !d.covered && d.person !== person) await store.writeDone(a.id, Object.assign({}, d, { person, movedFrom: d.person }));
   }
-  async function arrival(p) { const a = V() && V().assignments.find(x => x.kind === "arrival" && x.person === p && x.date === S.today); if (!a) return; if (S.done[a.id]) await undo(a); else await finish(a); }
+  // Arrival: the steps show first, I'm home unlocks once each is ticked (Mama, 11 Nov 18:55)
+  const arrivalSteps = () => (R.short.arrival || "").trim().replace(/\.$/, "").split(/,\s*/).filter(Boolean).map(x => x.charAt(0).toUpperCase() + x.slice(1));
+  async function arrival(p) { const a = V() && V().assignments.find(x => x.kind === "arrival" && x.person === p && x.date === S.today); if (!a) return; if (S.done[a.id]) await undo(a); else arrivalSheet(a, p); }
+  function arrivalSheet(a, p) {
+    const steps = arrivalSteps(), ticks = steps.map(() => false);
+    const go = h("button", { class: "btn", style: "width:100%;margin-top:12px;opacity:.4", onclick: async () => { if (!ticks.every(Boolean)) return; closeSheet(); await finish(a); } }, "🏠 I'm home · 0/" + steps.length);
+    const list = h("div", {}, steps.map((txt, i) => { const mark = h("span", { style: "flex:0 0 auto;width:22px;font-size:18px" }, "○");
+      const b = h("button", { class: "btn ghost", style: "display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin:6px 0;font-size:16px;padding:10px 14px", onclick: () => {
+        ticks[i] = !ticks[i]; mark.textContent = ticks[i] ? "✓" : "○"; b.style.background = ticks[i] ? "var(--green)" : ""; b.style.borderColor = ticks[i] ? "var(--green)" : ""; b.style.color = ticks[i] ? "#fff" : "";
+        const n = ticks.filter(Boolean).length, all = n === steps.length; go.style.opacity = all ? "1" : ".4"; go.textContent = all ? "🏠 I'm home" : "🏠 I'm home · " + n + "/" + steps.length; } }, mark, h("span", {}, txt)); return b; }));
+    sheet(h("h3", {}, (R.people[p] || {}).label + " · Arrival"), h("p", { style: "color:var(--mute);margin:0 0 6px" }, "Tick each step, then I'm home."), list, go);
+  }
   async function toggleAway(p, date) { const a = JSON.parse(JSON.stringify(S.away || {})); a[p] = a[p] || []; const i = a[p].indexOf(date); if (i >= 0) a[p].splice(i, 1); else a[p].push(date); await store.writeAway(a); }
 
   // laundry pipeline
@@ -1819,7 +1830,7 @@
       const on = a && S.done[a.id];
       const aw = (S.away[p] || []).includes(S.today);
       const n = S.week ? streakOf(p) : 0, r = S.week ? nightOf(p, S.today) : null, hit = r === "hit" || (r === null && S.week && freeNight(p, S.today));
-      const c = h("button", { class: "person" + (on ? " on" : "") + (aw ? " off" : "") + (p === S.me ? " me" : "") + (hit ? " hit" : ""), onclick: () => arrival(p), title: "Tap when home · hold for today's jobs" },
+      const c = h("button", { class: "person" + (on ? " on" : "") + (aw ? " off" : "") + (p === S.me ? " me" : "") + (hit ? " hit" : ""), onclick: () => arrival(p), title: "Tap when home: the arrival steps first · hold for today's jobs" },
         h("span", { class: "pn" }, h("i"), R.people[p].label + (aw ? " away" : on ? " home" : ""))); // home inline (Mama, 8 Nov 01:40); no 🔥 here, it shows on Mine and the Tonight row (Mama, 8 Nov 02:01)
       longPress(c, () => daySheet(p)); return c;
     }));
@@ -2097,13 +2108,13 @@
     order.forEach((r, i) => { const a = ev(r); if (!a) return; if (i) row.appendChild(h("div", { class: "arrow" }, "›")); row.appendChild(tile(a)); });
     // arrival checklist tile, first thing on the board
     const arrTile = h("div", { class: "tile", style: "flex-direction:row;align-items:center;gap:18px;flex-wrap:wrap" },
-      h("div", { style: "flex:1 1 100%;min-width:0" }, h("div", { class: "k" }, "Arrival · tap your name when home"), h("div", { class: "s", style: "font-size:12px;color:var(--mute)" }, "Long-press for the steps")),
+      h("div", { style: "flex:1 1 100%;min-width:0" }, h("div", { class: "k" }, "Arrival · tap your name when home"), h("div", { class: "s", style: "font-size:12px;color:var(--mute)" }, "The steps show when you tap")),
       h("div", { style: "display:flex;gap:6px;flex-wrap:wrap" }, R.order.map(p => {
         const a = W.assignments.find(x => x.kind === "arrival" && x.person === p && x.date === d);
         const on = a && S.done[a.id];
         return h("button", { class: "btn " + (on ? "" : "ghost"), style: on ? "background:var(--green);border-color:var(--green)" : "", onclick: () => arrival(p) }, R.people[p].label + (on ? " · home" : ""));
       })));
-    longPress(arrTile, () => sheet(h("h3", {}, "Arrival"), h("p", {}, R.dod.arrival)));
+    
     { const sc = swapCards(); if (sc) main.appendChild(sec("Swap requests", sc)); }
     { const late = lateList().map(a => (R.people[effPerson(a)] || {}).label + " · " + a.label); if (late.length) main.appendChild(h("div", { class: "latebar" }, h("b", {}, isLate() ? "After 10 pm · still open: " : "Still open: "), late.join(", "), h("div", { style: "font-size:12px;opacity:.9;margin-top:2px" }, "Orange tiles still count for " + fmtDay(S.today).replace(/,.*/, "") + " until 6 am."))); }
     // no Arrival block: the name tiles at the top already mark who is home (Mama, 8 Nov 02:35)
