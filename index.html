@@ -335,6 +335,21 @@
 
   body.board .mepill { opacity:.35; }
   @media (max-width: 760px) { .bzones { grid-template-columns:1fr; } .bchain { grid-template-columns:1fr 1fr; } }
+  /* ---- ➕ To-do lists (Mama, 11 Nov 13:37): a catch-all so we don't forget. Off the ledger, never late, not in the review. ---- */
+  .todofab { position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom)); z-index:8; min-height:52px; padding:0 20px; border-radius:999px; border:none; background:var(--ink); color:var(--onink); font-weight:700; font-size:16px; box-shadow:0 4px 16px rgba(0,0,0,.28); }
+  body.hasfab .main { padding-bottom:88px; }
+  .pdot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; flex:0 0 auto; }
+  .todorow { border-left-width:5px; }
+  .todorow > .stxt .swho { display:block; margin-left:0 !important; margin-top:1px; }
+  .todowho { display:flex; gap:6px; flex-wrap:wrap; }
+  .todowho button { display:inline-flex; align-items:center; }
+  .btodo { display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:10px; align-items:start; }
+  .btodo .col { background:var(--card2); border:1.5px solid var(--line); border-top-width:5px; border-radius:14px; padding:6px; display:flex; flex-direction:column; gap:6px; min-height:70px; }
+  .btodo .col .pn { font-weight:700; font-size:16px; display:flex; align-items:center; padding:2px 4px 0; }
+  .btodo .todorow { border-left-width:1.5px; border-left-color:var(--line) !important; padding:6px 8px; gap:8px; }
+  .btodo .shoprow > .stxt { font-size:15px; flex:1 1 auto !important; min-width:0; overflow-wrap:anywhere; }
+  .btodo .shoprow .chk { flex:0 0 24px !important; width:24px; height:24px; }
+  @media (max-width: 760px) { .btodo { grid-template-columns:1fr 1fr; } }
   .latebar { background:#E8892B; color:#fff; border-radius:12px; padding:10px 14px; font-size:14px; line-height:1.45; }
   .latetag { display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.08em; color:#fff; background:#E8892B; border-radius:5px; padding:1px 6px; margin:2px 0; }
   .redtag { display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.08em; color:#fff; background:var(--red); border-radius:5px; padding:1px 6px; margin:2px 0; }
@@ -345,9 +360,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794343691"></script>
-<script src="./engine.js?v=1794343691"></script>
-<script>window.VATRA_BUILD="1794343691";</script>
+<script src="./rules.js?v=1794422613"></script>
+<script src="./engine.js?v=1794422613"></script>
+<script>window.VATRA_BUILD="1794422613";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -407,7 +422,7 @@
     me: localStorage.getItem("vatra.me") || null,
     tab: (localStorage.getItem("vatra.me") && localStorage.getItem("vatra.me") !== "Board") ? "mine" : "tonight",
     db: null, dbState: "loading", // loading | ok | none
-    week: null, nextWeek: null, ideas: [], shop: [], asks: [], rewards: [], mess: [], gone: {}, sheetKeep: false, done: {}, laundry: null, away: {}, settings: {}, streaks: {},
+    week: null, nextWeek: null, ideas: [], shop: [], asks: [], todos: [], todoErr: false, rewards: [], mess: [], gone: {}, sheetKeep: false, done: {}, laundry: null, away: {}, settings: {}, streaks: {},
     running: JSON.parse(localStorage.getItem("vatra.running") || "{}"),
     pomo: JSON.parse(localStorage.getItem("vatra.pomo") || "{}"),
     today: todayStr(),
@@ -447,6 +462,8 @@
     async deleteShop(id) { S.shop = S.shop.filter(x => x.id !== id); S.gone[id] = Date.now(); render(); refreshShopSheet(); if (S.db) await delDoc("shop/" + docId(id), { id }); else { const l = local.get("shop") || {}; delete l[id]; local.set("shop", l); } },
     async writeAsk(x) { const i = S.asks.findIndex(y => y.id === x.id); if (i >= 0) S.asks[i] = x; else S.asks.push(x); render(); if (S.db) await S.db.doc("asks/" + docId(x.id)).set(x); else { const l = local.get("asks") || {}; l[x.id] = x; local.set("asks", l); } },
     async deleteAsk(id) { S.asks = S.asks.filter(y => y.id !== id); S.gone[id] = Date.now(); render(); if (S.db) await delDoc("asks/" + docId(id), { id }); else { const l = local.get("asks") || {}; delete l[id]; local.set("asks", l); } },
+    async writeTodo(x) { const i = S.todos.findIndex(y => y.id === x.id); if (i >= 0) S.todos[i] = x; else S.todos.push(x); render(); try { if (S.db) await S.db.doc("todos/" + docId(x.id)).set(x); else { const l = local.get("todos") || {}; l[x.id] = x; local.set("todos", l); } } catch (e) { S.todoErr = true; render(); } },
+    async deleteTodo(id) { S.todos = S.todos.filter(y => y.id !== id); S.gone[id] = Date.now(); render(); try { if (S.db) await delDoc("todos/" + docId(id), { id }); else { const l = local.get("todos") || {}; delete l[id]; local.set("todos", l); } } catch (e) { S.todoErr = true; render(); } },
     async writeSettings(patch) { S.settings = Object.assign({}, S.settings, patch); if (S.db) await S.db.doc("settings/main").set(S.settings); else local.set("settings", S.settings); render(); },
     async log(entry) { entry.at = new Date().toISOString(); entry.week = monday(); if (S.db) await S.db.collection("log").add(entry); else { const l = local.get("log") || []; l.push(entry); local.set("log", l); } },
   };
@@ -524,6 +541,7 @@
     S.mess = Object.values(local.get("mess") || {});
     S.shop = Object.values(local.get("shop") || {});
     S.asks = Object.values(local.get("asks") || {});
+    S.todos = Object.values(local.get("todos") || {});
     S.laundry = local.get("laundry"); S.away = local.get("away") || {}; S.settings = local.get("settings") || {};
   }
   function subscribe() {
@@ -536,6 +554,7 @@
     db.doc("state/laundry").onSnapshot(s => { S.laundry = s.exists ? s.data() : null; render(); }, () => {});
     db.doc("state/away").onSnapshot(s => { S.away = s.exists ? s.data() : {}; render(); }, () => {});
     db.collection("asks").onSnapshot(s => { S.asks = s.docs.map(d => d.data()).filter(b => live(b) && !S.gone[b.id]); render(); }, () => {});
+    db.collection("todos").onSnapshot(s => { S.todoErr = false; S.todos = s.docs.map(d => d.data()).filter(b => live(b) && !S.gone[b.id]); render(); }, () => { S.todoErr = true; render(); });
     db.collection("shop").onSnapshot(s => { S.shop = s.docs.map(d => d.data()).filter(b => live(b) && !S.gone[b.id]); render(); refreshShopSheet(); }, () => {});
     db.collection("mess").onSnapshot(s => { S.mess = s.docs.map(d => d.data()).filter(b => live(b) && !S.gone[b.id]); render(); }, () => {});
     db.collection("rewards").onSnapshot(s => { S.rewards = s.docs.map(d => d.data()).filter(b => live(b) && !S.gone[b.id]); render(); refreshRewardSheet(); }, () => {});
@@ -1498,6 +1517,119 @@
     const m = [["ask", "🙋 Ask someone", () => askSheet()], ["wish", "🎁 I'd like…", () => wishSheet()], ["help", "🤲 I helped", () => helpSheet()]];
     return h("div", { class: "pick", style: "margin-bottom:10px" }, m.map(([k, l, f]) => h("button", { class: k === cur ? "on" : "", onclick: () => { if (k !== cur) { closeSheet(); f(); } } }, l)));
   }
+  /* ---------- ➕ To-do lists (Mama, 11 Nov 13:37) ----------
+     A catch-all so we don't forget: every to-do belongs to one person's list. No minutes, never orange or red,
+     not in pink / 🔥, not in the review. Anyone can add one for anyone. It goes straight to the list.
+     A to-do with a time also gets a Google Calendar event (prefilled link; the person it is for is invited).
+     It stays on the list either way, and is crossed off here. Emails live in settings/main.emails (never in the code). */
+  const PCOL = { Mama: "#7B4FC4", Tata: "#3557B7", Maya: "#0F8A86", Sofia: "#C9971A", Corvin: "#3FA0E0" };
+  const pdot = (p) => h("i", { class: "pdot", style: "background:" + (PCOL[p] || "var(--mute)") });
+  const plabel = (p) => (R.people[p] || { label: p || "" }).label;
+  const fmtTime = (t) => { if (!t) return ""; const [hh, mm] = t.split(":").map(Number); return ((hh + 11) % 12 + 1) + ":" + String(mm).padStart(2, "0") + (hh < 12 ? " am" : " pm"); };
+  const todoDay = (d) => d === S.today ? "today" : d === E.addDays(S.today, 1) ? "tomorrow" : new Date(d + "T12:00").toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" });
+  const todoWhen = (x) => !x.date ? "" : (x.time ? (x.cal ? "📅 " : "🕓 ") : "") + todoDay(x.date) + (x.time ? " " + fmtTime(x.time) : "");
+  const todoKey = (x) => (x.status === "done" ? "2" : x.date ? "0" + x.date + (x.time || "99:99") : "1") + (x.at || "");
+  const todosOf = (p) => S.todos.filter(x => x.to === p && (x.status !== "done" || x.doneDate === S.today)).sort((a, b) => (todoKey(a) < todoKey(b) ? -1 : 1));
+  const todoToggle = (x) => store.writeTodo(x.status === "done" ? Object.assign({}, x, { status: "open", doneAt: null, doneDate: null, doneBy: null }) : Object.assign({}, x, { status: "done", doneAt: new Date().toISOString(), doneDate: S.today, doneBy: isBoard() ? x.to : S.me }));
+  function todoRow(x) {
+    const done = x.status === "done";
+    const subTxt = [x.from && x.from !== x.to ? "from " + plabel(x.from) : null, todoWhen(x)].filter(Boolean).join(" · ");
+    const row = h("div", { class: "li shoprow todorow" + (done ? " done" : ""), style: "border-left-color:" + (PCOL[x.to] || "var(--line)"), role: "checkbox", "aria-checked": done ? "true" : "false" },
+      h("div", { class: "chk" + (done ? " on" : "") }, done ? "✓" : ""),
+      h("div", { class: "stxt" }, x.text, subTxt ? h("span", { class: "swho" }, subTxt) : null),
+      isBoard() ? null : h("button", { class: "more", title: "Edit, calendar or delete", onclick: (e) => { e.stopPropagation(); todoMenu(x); } }, "⋯"));
+    // phones: tap the row to cross it off, ⋯ for the rest. Board (narrow columns): tap the circle to cross off, tap the words for the rest.
+    row.addEventListener("click", (e) => { if (e.target.closest("button,input,select,a")) return; if (isBoard() && !e.target.closest(".chk")) todoMenu(x); else todoToggle(x); });
+    return row;
+  }
+  // Google Calendar link, prefilled: 1 hour, Montréal time; the person it is for is the guest (unless it is this phone's owner)
+  function calGuest(x) { const em = (S.settings.emails || {})[x.to]; return x.to !== S.me && em ? em : null; }
+  function calUrl(x) {
+    const f = (d) => d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0") + "T" + String(d.getHours()).padStart(2, "0") + String(d.getMinutes()).padStart(2, "0") + "00";
+    const s = new Date(x.date + "T" + x.time + ":00"), e = new Date(s.getTime() + 3600000);
+    const q = ["action=TEMPLATE", "text=" + encodeURIComponent(x.text), "dates=" + f(s) + "/" + f(e), "ctz=America/Toronto", "details=" + encodeURIComponent("Vatra to-do for " + plabel(x.to) + ". Cross it off in Vatra.")];
+    const g = calGuest(x); if (g) q.push("add=" + encodeURIComponent(g));
+    return "https://calendar.google.com/calendar/render?" + q.join("&");
+  }
+  function calBox(x) {
+    const g = calGuest(x), noMail = x.to !== S.me && !g;
+    const link = h("a", { class: "btn", href: calUrl(x), target: "_blank", rel: "noopener", style: "display:flex;align-items:center;justify-content:center;text-decoration:none", onclick: () => { store.writeTodo(Object.assign({}, x, { cal: { by: S.me, at: new Date().toISOString() } })); closeSheet(); } }, "📅 Add to Google Calendar");
+    return h("div", { style: "display:flex;flex-direction:column;gap:8px" }, link,
+      h("p", { class: "note", style: "margin:0" }, noMail ? "No email saved for " + plabel(x.to) + ", so no invitation will be sent." : g ? plabel(x.to) + " gets an invitation. Check it, then tap Save in the calendar." : "It opens in your calendar. Check it, then tap Save."),
+      noMail && isMgr() ? h("button", { class: "btn quiet sm", onclick: emailsSheet }, "📧 Set the calendar emails") : null,
+      x.cal ? h("p", { class: "note", style: "margin:0" }, "Already added" + (x.cal.by && R.people[x.cal.by] ? " by " + plabel(x.cal.by) : "") + ".") : null);
+  }
+  function calStep(x, changed) {
+    sheet(h("h3", {}, "✓ On " + (x.to === S.me ? "your" : plabel(x.to) + "'s") + " list"),
+      h("p", { class: "note" }, x.text + " · " + todoDay(x.date) + " " + fmtTime(x.time)),
+      changed ? h("p", { class: "note", style: "color:var(--red)" }, "The day or time changed. The earlier calendar event is not updated: delete it in Google Calendar.") : null,
+      h("p", { class: "note" }, "It has a time, so it also goes in the calendar. It stays on the list until it is crossed off."),
+      calBox(x), h("button", { class: "btn quiet", onclick: closeSheet }, "Not now"));
+  }
+  function todoMenu(x) {
+    const canDel = isBoard() || isMgr() || x.from === S.me || x.to === S.me;
+    sheet(h("h3", {}, x.text), h("p", { class: "note" }, [plabel(x.to) + "'s list", x.from && x.from !== x.to ? "from " + plabel(x.from) : null, todoWhen(x)].filter(Boolean).join(" · ")),
+      h("button", { class: "btn", onclick: () => todoSheet(x) }, "✏️ Edit"),
+      x.date && x.time ? calBox(x) : null,
+      canDel ? h("button", { class: "btn quiet", style: "color:var(--red);border-color:var(--red)", onclick: () => { closeSheet(); store.deleteTodo(x.id); } }, "✕ Delete") : null);
+  }
+  function emailsSheet() {
+    const cur = S.settings.emails || {}, box = "width:100%;font:inherit;font-size:16px;padding:10px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);box-sizing:border-box";
+    const inps = {}; for (const p of R.order) { inps[p] = h("input", { type: "email", autocapitalize: "none", autocomplete: "off", spellcheck: "false", placeholder: "name@gmail.com", style: box }); inps[p].value = cur[p] || ""; }
+    sheet(h("h3", {}, "📧 Calendar emails"), h("p", { class: "note" }, "Used only to invite the person when a to-do has a time. Saved in the family database, not in the app's code."),
+      h("div", { style: "display:flex;flex-direction:column;gap:10px" }, R.order.map(p => h("div", {}, h("div", { class: "label" }, pdot(p), plabel(p)), inps[p]))),
+      h("button", { class: "btn", onclick: async () => { const em = {}; for (const p of R.order) { const v = inps[p].value.trim(); if (v) em[p] = v; } await store.writeSettings({ emails: em }); closeSheet(); } }, "Save"));
+    S.sheetKeep = true;
+  }
+  function todoSheet(edit) {
+    const ex = edit && edit.id && edit.text ? edit : null; // onclick passes an Event
+    const st = { to: ex ? ex.to : (isBoard() ? null : S.me), date: ex ? ex.date || null : null, time: ex ? ex.time || null : null };
+    const box = "width:100%;font:inherit;font-size:17px;padding:10px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);box-sizing:border-box";
+    const inp = h("textarea", { rows: "2", placeholder: "e.g. take the return box to the post office", style: box + ";resize:none;line-height:1.35", enterkeyhint: "done" });
+    if (ex) inp.value = ex.text;
+    inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } }); // Enter only closes the keyboard
+    const tmr = E.addDays(S.today, 1);
+    const whoBtns = R.order.map(p => h("button", { class: "btn quiet sm", onclick: () => { st.to = p; paint(); } }, pdot(p), plabel(p)));
+    const bNone = h("button", { class: "btn quiet sm", onclick: () => { st.date = null; st.time = null; paint(); } }, "No day");
+    const bToday = h("button", { class: "btn quiet sm", onclick: () => { st.date = S.today; paint(); } }, "Today");
+    const bTmr = h("button", { class: "btn quiet sm", onclick: () => { st.date = tmr; paint(); } }, "Tomorrow");
+    const small = "font:inherit;font-size:16px;padding:6px 8px;border:1.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)";
+    const dateInp = h("input", { type: "date", min: S.today, style: small, "aria-label": "Day", onchange: (e) => { st.date = e.target.value || null; if (!st.date) st.time = null; paint(); } });
+    const timeInp = h("input", { type: "time", step: "300", style: small, "aria-label": "Time", onchange: (e) => { st.time = e.target.value || null; if (st.time && !st.date) st.date = S.today; paint(); } });
+    const bNoTime = h("button", { class: "btn quiet sm", onclick: () => { st.time = null; paint(); } }, "No time");
+    const whenLabel = h("p", { class: "note", style: "margin:0" }, "");
+    const msg = h("p", { class: "note", style: "color:var(--red);margin:0" }, "");
+    const sendBtn = h("button", { class: "btn" }, "");
+    function paint() {
+      whoBtns.forEach((b, i) => b.className = "btn " + (R.order[i] === st.to ? "" : "quiet") + " sm");
+      bNone.className = "btn " + (!st.date ? "" : "quiet") + " sm"; bToday.className = "btn " + (st.date === S.today ? "" : "quiet") + " sm"; bTmr.className = "btn " + (st.date === tmr ? "" : "quiet") + " sm";
+      dateInp.value = st.date || ""; timeInp.value = st.time || ""; bNoTime.style.display = st.time ? "" : "none";
+      whenLabel.textContent = st.time ? "→ " + fmtDay(st.date) + ", " + fmtTime(st.time) + " · also goes in the calendar" : st.date ? "→ " + fmtDay(st.date) + " · add a time to put it in the calendar too" : "No day: it just waits on the list.";
+      sendBtn.textContent = ex ? "Save changes" : !st.to ? "Add to a list" : st.to === S.me ? "Add to my list" : "Add to " + plabel(st.to) + "'s list";
+    }
+    let sending = false;
+    sendBtn.onclick = async () => {
+      const text = inp.value.trim();
+      if (!text) { msg.textContent = "Write what needs doing."; inp.focus(); return; }
+      if (!st.to) { msg.textContent = "Pick whose list it goes on."; return; }
+      if (sending) return; sending = true;
+      const whenChanged = ex && ((ex.date || null) !== st.date || (ex.time || null) !== st.time);
+      const x = ex ? Object.assign({}, ex, { text, to: st.to, date: st.date, time: st.time, cal: whenChanged || ex.to !== st.to ? null : ex.cal || null, editedAt: new Date().toISOString() })
+        : { id: "todo_" + Date.now(), text, to: st.to, from: isBoard() ? null : S.me, date: st.date, time: st.time, status: "open", at: new Date().toISOString(), cal: null };
+      await store.writeTodo(x);
+      if (x.time && !x.cal) calStep(x, !!(whenChanged && ex.cal)); else closeSheet();
+    };
+    paint();
+    sheet(h("h3", {}, ex ? "✏️ Edit to-do" : "➕ New to-do"),
+      h("div", {}, h("div", { class: "label" }, "What"), inp),
+      h("div", {}, h("div", { class: "label" }, "Who"), h("div", { class: "todowho" }, whoBtns)),
+      h("div", {}, h("div", { class: "label" }, "When · optional"), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center" }, bNone, bToday, bTmr, dateInp), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px" }, h("span", { class: "note" }, "Time"), timeInp, bNoTime), whenLabel),
+      msg, sendBtn,
+      isMgr() ? h("button", { class: "btn quiet sm", style: "align-self:flex-start", onclick: emailsSheet }, "📧 Calendar emails") : null);
+    S.sheetKeep = true;
+  }
+  const todoErrBanner = () => S.todoErr ? h("div", { class: "banner" }, "To-dos could not be saved: the family database needs one more permission. Tell Claude.") : null;
+
   function askSheet(edit) {
     const ex = edit && edit.id && edit.text ? edit : null; // onclick passes an Event
     const st = { from: ex ? ex.from : (isBoard() ? null : S.me), to: ex ? ex.to : null, when: ex ? ex.date : S.today, minutes: ex ? ex.minutes : 15 };
@@ -1638,6 +1770,9 @@
     const od = overdueList();
     if (od.length) body.appendChild(redColumn(od));
     app.appendChild(body);
+    // ➕ To-do: floating on phones (always under the thumb), in the top bar on the Board (Mama, 11 Nov)
+    const fab = !isBoard(); document.body.classList.toggle("hasfab", fab);
+    if (fab) app.appendChild(h("button", { class: "todofab", onclick: () => todoSheet() }, "➕ To-do"));
   }
 
   function whoScreen() {
@@ -1665,6 +1800,7 @@
     const me = S.me ? (() => { const sw = () => { localStorage.removeItem("vatra.me"); S.me = null; render(); }; const b = h("button", { class: "mepill", title: isBoard() ? "Hold to change this device" : "Switch person", onclick: isBoard() ? null : sw }, "👤 " + ((R.people[S.me] || {}).label || "Kitchen board"), isBoard() ? null : h("span", { class: "swl" }, " · switch")); if (isBoard()) longPress(b, sw); return b; })() : null;
     const u = shopOpenItems().filter(x => isUrg(x)).length;
     const acts = h("div", { class: "topbtns" }, me,
+      isBoard() ? h("button", { class: "ibtn lbl", title: "New to-do", onclick: () => todoSheet() }, "➕ To-do") : null,
       h("button", { class: "ibtn lbl", title: "Ask", onclick: askSheet }, "🙋 Ask"),
       h("button", { class: "ibtn lbl" + (u ? " shopurg" : ""), title: "Shopping list", onclick: shopSheet }, u ? "🛒 Shop " + u + "!" : "🛒 Shop"),
       isBoard() ? null : h("button", { class: "ibtn aa", title: "Text size · " + Math.round(zoomNow() * 100) + "%", onclick: zoomNext }, "Aa"),
@@ -1901,6 +2037,8 @@
         longPress(c, () => sheetFor(a)); doneChips.appendChild(c); } }
     if (chips.children.length) main.appendChild(sec("Today", chips));
     if (doneChips.children.length) main.appendChild(foldBox("✓ Done today (" + doneChips.children.length + ")", [doneChips], "_boardDoneOpen"));
+    { const eb = todoErrBanner(); if (eb) main.appendChild(eb);
+      main.appendChild(sec("To-do · so we don't forget", h("div", { class: "btodo" }, R.order.map(p => { const tl = todosOf(p); return h("div", { class: "col", style: "border-top-color:" + PCOL[p] }, h("div", { class: "pn" }, pdot(p), plabel(p)), tl.length ? tl.map(todoRow) : h("div", { class: "note", style: "padding:0 2px" }, "—")); })))); }
     main.appendChild(h("div", { class: "note", style: "text-align:right;font-size:11px" }, "Kitchen board · hold the 👤 pill to change this device"));
     const od = overdueList();
     if (od.length) main.appendChild(h("div", { class: "redrow", style: "background:var(--red);color:#fff;border-radius:12px;padding:10px 14px;gap:16px;flex-wrap:wrap;font-size:14px" }, od.map(o => h("span", {}, h("b", {}, R.people[o.person].label), " · " + o.what))));
@@ -2017,6 +2155,8 @@
     const row = (a) => { if (a._zoneDay) { const li = h("div", { class: "li future" }, h("div", {}, h("div", { class: "n" }, a.label + " · every day"), h("div", { class: "s" }, R.short[a.chore] || ""))); fx(li, a); return li; } const st = state(a); const li = h("div", { class: "li " + (a.kind === "zone" && !a.carried && zoneToday(a) && st !== "overdue" ? "done" : st) }, h("div", {}, h("div", { class: "n" }, a.label + (a.carried ? " · from last week" : a.kind === "zone" ? " · every day" : "")), mealLine(a), h("div", { class: "s" }, a.kind === "zone" && !a.carried ? zoneDaysTxt(a) : (sub(a, st) || (st === "future" ? "later" : ""))), h("div", { class: "s", style: "color:var(--ink)" }, R.short[a.chore] || "")), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end" }, a.kind === "zone" && !a.carried ? zoneActs(a) : acts(a, st))); fx(li, a); markLate(li, a, true); longPress(li, () => sheetFor(a)); mealMark(li, a); return li; };
     main.appendChild(h("div", {}, h("div", { class: "label", style: "color:var(--ink)" }, "Today · " + fmtDay(S.today)), h("div", { class: "list" }, ...(() => { const shopRows = (S.me === "Tata" && (shopOpenItems().some(x => isUrg(x)) || W.assignments.some(x => (x.chore === "shop" || x.chore === "costco") && (x.date === S.today || shopFri(x, S.today) || (!x.date && ["Sat", "Sun"].includes(E.dow(S.today)))))) ? [(() => { const open = shopOpenItems(); const li = h("div", { class: "li" + (open.some(x => isUrg(x)) ? " overdue" : "") }, h("div", {}, h("div", { class: "n" }, "🛒 Shopping list"), h("div", { class: "s" }, open.length + " to buy" + (open.some(x => isUrg(x)) ? " · " + open.filter(x => isUrg(x)).length + " urgent" : "") + (open.some(x => x.meal) ? " · " + open.filter(x => x.meal).length + " meal ideas" : ""))), h("button", { class: "btn", onclick: shopSheet }, "Open")); li.addEventListener("click", (e) => { if (e.target.tagName !== "BUTTON") shopSheet(); }); return li; })()] : []); const dr = null, late = false; const openT = todayList.filter(a => rank(a) < 3), doneT = todayList.filter(a => rank(a) >= 3); const rows = openT.map(row).concat(doneT.length ? [foldBox("✓ Done today (" + doneT.length + ")", doneT.map(row), "_doneOpen")] : []); const nLate = todayList.filter(lateOpen).length; // orange jobs above everything, even the 🛒 row (Mama, 5 Nov 22:08)
       return rows.slice(0, nLate).concat(late ? [dr] : [], shopRows, rows.slice(nLate), late || !dr ? [] : [dr]); })())));
+    { const tl = todosOf(S.me), nOpen = tl.filter(x => x.status !== "done").length, eb = todoErrBanner(); if (eb) main.appendChild(eb);
+      main.appendChild(h("div", {}, h("div", { class: "label", style: "color:var(--ink)" }, "To-do" + (nOpen ? " · " + nOpen : "")), tl.length ? h("div", { class: "list" }, tl.map(todoRow)) : h("div", { class: "note" }, "Nothing to remember. ➕ To-do adds one, for you or for someone else."))); }
     if (S._arrivalRow) { main.appendChild(S._arrivalRow); S._arrivalRow = null; }
     if (keys.length) main.appendChild(h("div", { style: "margin-top:18px;border-top:1px solid var(--line);padding-top:10px" }, foldBox("Later this week (" + keys.reduce((n, k) => n + byDay[k].length, 0) + ")", keys.map(k => { const list = h("div", { class: "list" }); for (const a of byDay[k]) list.appendChild(row(a)); return h("div", {}, h("div", { class: "label", style: "font-size:11px" }, k === "weekend" || k === "this week" ? k : fmtDay(k)), list); }), "_laterOpen")));
     // away days: small, at the bottom, folded
