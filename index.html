@@ -367,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794441439"></script>
-<script src="./engine.js?v=1794441439"></script>
-<script>window.VATRA_BUILD="1794441439";</script>
+<script src="./rules.js?v=1794442068"></script>
+<script src="./engine.js?v=1794442068"></script>
+<script>window.VATRA_BUILD="1794442068";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -776,14 +776,22 @@
   const arrivalSteps = () => (R.short.arrival || "").trim().replace(/\.$/, "").split(/,\s*/).filter(Boolean).map(x => x.charAt(0).toUpperCase() + x.slice(1));
   async function arrival(p) { const a = V() && V().assignments.find(x => x.kind === "arrival" && x.person === p && x.date === S.today); if (!a) return; if (S.done[a.id]) await undo(a); else arrivalSheet(a, p); }
   function arrivalSheet(a, p) {
-    const steps = arrivalSteps(), ticks = steps.map(() => false);
-    const go = h("button", { class: "btn", style: "width:100%;margin-top:12px;opacity:.4", onclick: async () => { if (!ticks.every(Boolean)) return; closeSheet(); await finish(a); } }, "🏠 I'm home · 0/" + steps.length);
-    const list = h("div", {}, steps.map((txt, i) => { const mark = h("span", { style: "flex:0 0 auto;width:22px;font-size:18px" }, "○");
-      const b = h("button", { class: "btn ghost", style: "display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin:6px 0;font-size:16px;padding:10px 14px", onclick: () => {
-        ticks[i] = !ticks[i]; mark.textContent = ticks[i] ? "✓" : "○"; b.style.background = ticks[i] ? "var(--green)" : ""; b.style.borderColor = ticks[i] ? "var(--green)" : ""; b.style.color = ticks[i] ? "#fff" : "";
-        const n = ticks.filter(Boolean).length, all = n === steps.length; go.style.opacity = all ? "1" : ".4"; go.textContent = all ? "🏠 I'm home" : "🏠 I'm home · " + n + "/" + steps.length; } }, mark, h("span", {}, txt)); return b; }));
-    sheet(h("h3", {}, (R.people[p] || {}).label + " · Arrival"), h("p", { style: "color:var(--mute);margin:0 0 6px" }, "Tick each step, then I'm home."), list, go);
+    // each step: 0 open, 1 done, 2 not applicable (✕ n/a, Mama 11 Nov 19:07); I'm home unlocks when every step is done or n/a
+    const steps = arrivalSteps(), st = steps.map(() => 0), rows = [];
+    const go = h("button", { class: "btn", style: "width:100%;margin-top:12px;opacity:.4", onclick: async () => { if (st.some(x => !x)) return; closeSheet(); await finish(a); } }, "🏠 I'm home · 0/" + steps.length);
+    const paint = () => { rows.forEach((r, i) => { const v = st[i];
+        r.mark.textContent = v === 1 ? "✓" : v === 2 ? "–" : "○";
+        r.b.style.background = v === 1 ? "var(--green)" : ""; r.b.style.borderColor = v === 1 ? "var(--green)" : v === 2 ? "var(--line)" : ""; r.b.style.color = v === 1 ? "#fff" : v === 2 ? "var(--mute)" : "";
+        r.txt.style.textDecoration = v === 2 ? "line-through" : "";
+        r.x.style.background = v === 2 ? "var(--mute)" : ""; r.x.style.color = v === 2 ? "#fff" : ""; r.x.style.borderColor = v === 2 ? "var(--mute)" : ""; });
+      const n = st.filter(Boolean).length, all = n === steps.length; go.style.opacity = all ? "1" : ".4"; go.textContent = all ? "🏠 I'm home" : "🏠 I'm home · " + n + "/" + steps.length; };
+    const list = h("div", {}, steps.map((t, i) => { const r = { mark: h("span", { style: "flex:0 0 auto;width:22px;font-size:18px" }, "○"), txt: h("span", {}, t) };
+      r.b = h("button", { class: "btn ghost", style: "flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:10px;text-align:left;font-size:16px;padding:10px 14px", onclick: () => { st[i] = st[i] === 1 ? 0 : 1; paint(); } }, r.mark, r.txt);
+      r.x = h("button", { class: "btn quiet", style: "flex:0 0 auto;font-size:14px;padding:0 12px", "aria-label": "Not applicable", onclick: () => { st[i] = st[i] === 2 ? 0 : 2; paint(); } }, "✕ n/a");
+      rows.push(r); return h("div", { style: "display:flex;gap:8px;align-items:stretch;margin:6px 0" }, r.b, r.x); }));
+    sheet(h("h3", {}, (R.people[p] || {}).label + " · Arrival"), h("p", { style: "color:var(--mute);margin:0 0 6px" }, "Tick each step, or ✕ n/a when there's nothing to do. Then I'm home."), list, go);
   }
+
   async function toggleAway(p, date) { const a = JSON.parse(JSON.stringify(S.away || {})); a[p] = a[p] || []; const i = a[p].indexOf(date); if (i >= 0) a[p].splice(i, 1); else a[p].push(date); await store.writeAway(a); }
 
   // laundry pipeline
