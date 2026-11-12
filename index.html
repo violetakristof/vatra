@@ -367,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794442068"></script>
-<script src="./engine.js?v=1794442068"></script>
-<script>window.VATRA_BUILD="1794442068";</script>
+<script src="./rules.js?v=1794451315"></script>
+<script src="./engine.js?v=1794451315"></script>
+<script>window.VATRA_BUILD="1794451315";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -989,7 +989,7 @@
   }
 
   // ---------- past midnight: today's open tiles turn orange ----------
-  const LATE_FROM = 22; // orange from 10 pm until the household day ends at 6 am
+  const LATE_FROM = 23; // orange from 11 pm (was 10 pm until Wed 11 Nov; Mama, 11 Nov 21:40) until the household day ends at 6 am
   const isLateAt = (hr) => E.ymd(new Date()) !== S.today || new Date().getHours() >= hr;
   const isLate = () => isLateAt(LATE_FROM);
   const SHOP_LATE = 16; // Shop goes orange Sunday 4 pm, so there is still time for Costco (Mama, 6 Nov)
@@ -1019,15 +1019,16 @@
   function lateList() { const W = V(); if (!W || !isLateAt(SHOP_LATE)) return []; return W.assignments.filter(a => a.kind !== "zone").concat(zoneTiles(), askTiles()).filter(a => lateOpen(a) && (a.kind === "evening" || a.kind === "zone" || a.kind === "fixed" || a.kind === "laundry" || a.chore === "roomReset" || a.ask)); }
 
 
-  // ---------- before 10 pm: on-time nights, streaks, pink screens, family reward ----------
-  const ON_TIME_BY = 22;
+  // ---------- before 11 pm (10 pm until Tue 10 Nov): on-time nights, streaks, pink screens, family reward ----------
+  const ON_TIME_BY = 23, ON_TIME_FROM = "2026-11-11"; // 11 pm from Wed 11 Nov (Mama, 11 Nov 21:40: "make the time 11pm to do everything instead of 10 for the reward"); earlier nights keep 10 pm
+  const onTimeBy = (d) => d && d < ON_TIME_FROM ? 22 : ON_TIME_BY;
   const BEFORE10_START = "2026-11-05"; // the feature went live Thu 5 Nov; earlier nights don't count
-  const cutoffMs = (d, hr) => new Date(d + "T" + String(hr || ON_TIME_BY).padStart(2, "0") + ":00:00").getTime();
+  const cutoffMs = (d, hr) => new Date(d + "T" + String(hr || onTimeBy(d)).padStart(2, "0") + ":00:00").getTime();
   const CHEF_BY = 20; // Chef counts as the cook's night when tapped Done before 8 pm (Mama, 5 Nov)
   // one-off: Chef by 10 pm instead of 8 pm for these cooks on these days (Mama, 7 Nov 18:05: Maya cooking)
   const CHEF_10 = { "2026-11-07": ["Maya"] };
-  const chefCut = (p, d) => (CHEF_10[d] || []).includes(p) ? ON_TIME_BY : CHEF_BY;
-  const tileCut = (a) => a && a.chore === "cook" ? chefCut(effPerson(a), a.date) : ON_TIME_BY;
+  const chefCut = (p, d) => (CHEF_10[d] || []).includes(p) ? onTimeBy(d) : CHEF_BY;
+  const tileCut = (a) => a && a.chore === "cook" ? chefCut(effPerson(a), a.date) : 0; // 0 = the night's own cutoff (cutoffMs → onTimeBy(d))
   const REWARD_SEED = ["Special Dessert", "Going to thrift", "Skincare shopping", "Ghibli night", "Friends over with Tata cooking", "Paid Uber (under $15)", "Onigiri treat"];
   // the shared reward menu: seed ideas (hideable) + anything the family adds in 🎁 Rewards
   function rewardList() {
@@ -1048,7 +1049,7 @@
     const add = async (by) => { const text = inp.value.trim(); if (!text) return; if (rewardList().some(x => x.text.toLowerCase() === text.toLowerCase())) { inp.value = ""; return; } await store.writeReward({ id: "rw_" + Date.now(), text, by, at: new Date().toISOString() }); inp.value = ""; };
     inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
     rewardOpen = true;
-    sheet(h("h3", {}, "🎁 Rewards"), h("p", { class: "note" }, "Ideas for rewards. Anyone can add one. They show up when you offer a reward in 🙋 Ask, and in the weekly Before 10 pm reward. Want one? Tap I'd like… and earn it with a job."), h("button", { class: "btn quiet sm", style: "margin-bottom:8px", onclick: () => { closeSheet(); wishSheet(); } }, "🎁 I'd like…"), inp,
+    sheet(h("h3", {}, "🎁 Rewards"), h("p", { class: "note" }, "Ideas for rewards. Anyone can add one. They show up when you offer a reward in 🙋 Ask, and in the weekly Before 11 pm reward. Want one? Tap I'd like… and earn it with a job."), h("button", { class: "btn quiet sm", style: "margin-bottom:8px", onclick: () => { closeSheet(); wishSheet(); } }, "🎁 I'd like…"), inp,
       isBoard() ? h("div", {}, h("p", { class: "note" }, "From:"), h("div", { class: "pick" }, R.order.map(p => h("button", { onclick: () => add(p) }, R.people[p].label)))) : h("button", { class: "btn", onclick: () => add(S.me) }, "Add"),
       h("div", { id: "rewardlist" }, rewardRows()));
     S.sheetKeep = true; rewardOpen = true;
@@ -1111,9 +1112,9 @@
   }
   function houseNight(d) { const tiles = nightTiles(d); const ps = R.order.map(p => [p, nightOf(p, d, tiles)]).filter(x => x[1] !== null); return { ps, hit: ps.length > 0 && ps.every(x => x[1] === "hit") && R.order.every(p => nightOf(p, d, tiles) !== null || freeNight(p, d)), done: ps.length > 0 && ps.every(x => x[1] !== "open") }; }
   function nineBanner() {
-    const hr = new Date().getHours(); if (E.ymd(new Date()) !== S.today || hr !== ON_TIME_BY - 1) return null;
+    const hr = new Date().getHours(); if (E.ymd(new Date()) !== S.today || hr !== onTimeBy(S.today) - 1) return null;
     const open = nightTiles(S.today).filter(t => !doneAtMs(t.id)); if (!open.length) return null;
-    return h("div", { class: "ninebar" }, h("b", {}, "1 hour left · still open: "), open.map(t => (R.people[t.p] || { label: t.p }).label + " · " + t.a.label).join(", "), h("div", { style: "font-size:12px;opacity:.9;margin-top:2px" }, "Done before 10 pm adds a 🔥 for this week."));
+    return h("div", { class: "ninebar" }, h("b", {}, "1 hour left · still open: "), open.map(t => (R.people[t.p] || { label: t.p }).label + " · " + t.a.label).join(", "), h("div", { style: "font-size:12px;opacity:.9;margin-top:2px" }, "Done before 11 pm adds a 🔥 for this week."));
   }
   // tap a name in the streak row: that person's jobs today, done (with time) and not done (Mama, 7 Nov 20:56)
   function dayItems(p, d) {
@@ -2036,11 +2037,11 @@
   const DOTS = (a) => { const W = V(); const start = R.startDate || ""; const out = []; for (let i = -1; i < 6; i++) { const d = E.addDays(a.week, i); /* dots run Sun to Sat (Mama, 8 Nov 01:45) */ const did = S.done[a.id + "@" + d]; const sk = S.done[a.id + "@" + d + ":skip"]; if (d < start) continue; /* days before the app started: no dot (Mama, 8 Nov 01:43) */ else if (did) out.push(["●", ""]); else if (sk) out.push(["○", "o"]); else if (d < S.today) out.push(["●", "x"]); else if (d === S.today) out.push(["◉", "t"]); else out.push(["○", "o"]); } return h("div", { class: "dots", title: "Sun to Sat" }, out.map(([c, k]) => h("span", { class: k }, c))); };
   function boardView(main) {
     const W = V(), d = S.today;
-    { const hn = houseNight(d); if (hn.hit) { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "House done before 10 🎉", h("div", { style: "font-size:14px;font-weight:500" }, "Everyone finished on time tonight."), h("div", { style: "font-size:15px;font-weight:600;margin-top:6px" }, R.order.map(p => R.people[p].label + " " + fireTxt(p)).join("  ·  ")))); confetti("house:" + d); } // 🔥 this week on the Board, inside the House done banner (Mama, 8 Nov 02:03)
+    { const hn = houseNight(d); if (hn.hit) { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "House done before 11 🎉", h("div", { style: "font-size:14px;font-weight:500" }, "Everyone finished on time tonight."), h("div", { style: "font-size:15px;font-weight:600;margin-top:6px" }, R.order.map(p => R.people[p].label + " " + fireTxt(p)).join("  ·  ")))); confetti("house:" + d); } // 🔥 this week on the Board, inside the House done banner (Mama, 8 Nov 02:03)
       const nb = nineBanner(); if (nb) main.appendChild(nb); }
     const sec = (label, node) => { const s = h("div", {}); s.appendChild(h("div", { class: "label" }, label)); s.appendChild(node); return s; };
     { const sc = swapCards(); if (sc) main.appendChild(sec("Swap requests", sc)); }
-    { const late = lateList().map(a => (R.people[effPerson(a)] || {}).label + " · " + a.label); if (late.length) main.appendChild(h("div", { class: "latebar" }, h("b", {}, isLate() ? "After 10 pm · still open: " : "Still open: "), late.join(", "), h("div", { style: "font-size:12px;opacity:.9;margin-top:2px" }, "Orange tiles still count for " + fmtDay(d).replace(/,.*/, "") + " until 6 am."))); }
+    { const late = lateList().map(a => (R.people[effPerson(a)] || {}).label + " · " + a.label); if (late.length) main.appendChild(h("div", { class: "latebar" }, h("b", {}, isLate() ? "After 11 pm · still open: " : "Still open: "), late.join(", "), h("div", { style: "font-size:12px;opacity:.9;margin-top:2px" }, "Orange tiles still count for " + fmtDay(d).replace(/,.*/, "") + " until 6 am."))); }
     // 1. zones
     const zones = zoneTiles();
     main.appendChild(sec("Zones this week", h("div", { class: "bzones" }, zones.map(a => {
@@ -2105,9 +2106,9 @@
   }
   function tonight(main) {
     if (isBoard()) return boardView(main);
-    { const hn = houseNight(S.today); if (hn.hit) { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "House done before 10 🎉", h("div", { style: "font-size:13px;font-weight:500" }, "Everyone finished on time tonight."))); confetti("house:" + S.today); }
+    { const hn = houseNight(S.today); if (hn.hit) { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "House done before 11 🎉", h("div", { style: "font-size:13px;font-weight:500" }, "Everyone finished on time tonight."))); confetti("house:" + S.today); }
       const nb = nineBanner(); if (nb) main.appendChild(nb);
-      main.appendChild(h("div", {}, h("div", { class: "label" }, "Before 10 pm · 🔥 this week"), streakRow())); }
+      main.appendChild(h("div", {}, h("div", { class: "label" }, "Before 11 pm · 🔥 this week"), streakRow())); }
     const W = V(), d = S.today;
     const ev = (role) => W.assignments.find(a => a.kind === "evening" && a.role === role && a.date === d);
     const sec = (label, node) => { const s = h("div", {}); s.appendChild(h("div", { class: "label" }, label)); s.appendChild(node); return s; };
@@ -2124,7 +2125,7 @@
       })));
     
     { const sc = swapCards(); if (sc) main.appendChild(sec("Swap requests", sc)); }
-    { const late = lateList().map(a => (R.people[effPerson(a)] || {}).label + " · " + a.label); if (late.length) main.appendChild(h("div", { class: "latebar" }, h("b", {}, isLate() ? "After 10 pm · still open: " : "Still open: "), late.join(", "), h("div", { style: "font-size:12px;opacity:.9;margin-top:2px" }, "Orange tiles still count for " + fmtDay(S.today).replace(/,.*/, "") + " until 6 am."))); }
+    { const late = lateList().map(a => (R.people[effPerson(a)] || {}).label + " · " + a.label); if (late.length) main.appendChild(h("div", { class: "latebar" }, h("b", {}, isLate() ? "After 11 pm · still open: " : "Still open: "), late.join(", "), h("div", { style: "font-size:12px;opacity:.9;margin-top:2px" }, "Orange tiles still count for " + fmtDay(S.today).replace(/,.*/, "") + " until 6 am."))); }
     // no Arrival block: the name tiles at the top already mark who is home (Mama, 8 Nov 02:35)
     main.appendChild(sec("Tonight", row));
     if (isMgr()) { const evs = W.assignments.filter(x => x.kind === "evening" && x.date === d && ["cook", "souschef", "dishes", "finisher"].includes(x.role));
@@ -2185,10 +2186,10 @@
 
   function mine(main) {
     { const r = nightOf(S.me, S.today); const n = streakOf(S.me);
-      if (r === "hit") { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "All done tonight ✨", h("div", { style: "font-size:13px;font-weight:500" }, (nightTiles(S.today).some(t => t.p === S.me && t.a.chore === "cook") && chefCut(S.me, S.today) === CHEF_BY ? "Chef before 8 pm" : "Before 10 pm") + " · " + fireTxt(S.me) + " this week"))); confetti("me:" + S.me + ":" + S.today); }
+      if (r === "hit") { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "All done tonight ✨", h("div", { style: "font-size:13px;font-weight:500" }, (nightTiles(S.today).some(t => t.p === S.me && t.a.chore === "cook") && chefCut(S.me, S.today) === CHEF_BY ? "Chef before 8 pm" : "Before 11 pm") + " · " + fireTxt(S.me) + " this week"))); confetti("me:" + S.me + ":" + S.today); }
       else if (r === null && freeNight(S.me, S.today)) { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "All done tonight ✨", h("div", { style: "font-size:13px;font-weight:500" }, "Nothing due tonight · " + fireTxt(S.me) + " this week"))); confetti("me:" + S.me + ":" + S.today); }
       else if (r === "late") main.appendChild(h("div", { class: "note", style: "margin-bottom:8px" }, "Done ✓ · but late, so tonight doesn't count for " + fireTxt(S.me) + "."));
-      else if (r === "open") main.appendChild(h("div", { class: "note", style: "margin-bottom:8px" }, fireTxt(S.me) + " this week · " + (nightTiles(S.today).some(t => t.p === S.me && t.a.chore === "cook") && chefCut(S.me, S.today) === CHEF_BY ? (S.me === "Tata" ? "Chef done by 8 pm" : "Chef done by 8 pm, the rest before 10 pm,") : "finish everything before 10 pm") + " to add tonight.")); }
+      else if (r === "open") main.appendChild(h("div", { class: "note", style: "margin-bottom:8px" }, fireTxt(S.me) + " this week · " + (nightTiles(S.today).some(t => t.p === S.me && t.a.chore === "cook") && chefCut(S.me, S.today) === CHEF_BY ? (S.me === "Tata" ? "Chef done by 8 pm" : "Chef done by 8 pm, the rest before 11 pm,") : "finish everything before 11 pm") + " to add tonight.")); }
     { const ur = todosOf(S.me).filter(isUrgTodo); if (ur.length) main.appendChild(h("div", { class: "todourg" }, h("div", { class: "label" }, "🔴 Urgent · " + ur.length), ur.map(todoRow))); }
     { const wc = wishCards(); if (wc) main.appendChild(wc); }
     { const kc = kindCards(); if (kc) main.appendChild(kc); }
@@ -2311,7 +2312,7 @@
           h("div", { class: "list" }, wm.map(m => h("div", { class: "li" }, h("div", {}, h("div", { class: "n" }, m.area + " · left by " + (m.who ? R.people[m.who].label : "unknown")), h("div", { class: "s" }, dayShort(m.date) + " · found by " + (R.people[m.by] || { label: m.by }).label + (m.note ? " · " + m.note : ""))),
             S.me === "Mama" ? h("button", { class: "btn quiet sm", title: "Remove (not fair / mistake)", onclick: () => store.deleteMess(m.id) }, "✕") : null)))))); } }
     // before 10 pm: on-time score and the family reward
-    { const rp_ = rewardPicker(W.week); if (rp_) main.appendChild(sec("⏰ Before 10 pm · this week", rp_)); }
+    { const rp_ = rewardPicker(W.week); if (rp_) main.appendChild(sec("⏰ Before 11 pm · this week", rp_)); }
     // 🍅 focus this week (information only)
     { const fd = Object.values(S.done).filter(d => d && d.focus && d.week === W.week && !d.deleted); if (fd.length) { const by = {}; for (const d of fd) by[d.person] = (by[d.person] || 0) + d.focus;
       main.appendChild(sec("🍅 Focus", h("div", { class: "list" }, h("div", { class: "li" }, h("div", {}, h("div", { class: "n" }, Object.keys(by).map(p => (R.people[p] || { label: p }).label + " " + Math.floor(by[p] / 15) + " 🍅").join(" · ")), h("div", { class: "s" }, "1 🍅 = 15 focused minutes. Information only, not on the ledger.")))))); } }
