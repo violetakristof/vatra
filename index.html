@@ -367,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794451315"></script>
-<script src="./engine.js?v=1794451315"></script>
-<script>window.VATRA_BUILD="1794451315";</script>
+<script src="./rules.js?v=1794454781"></script>
+<script src="./engine.js?v=1794454781"></script>
+<script>window.VATRA_BUILD="1794454781";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1027,7 +1027,11 @@
   const CHEF_BY = 20; // Chef counts as the cook's night when tapped Done before 8 pm (Mama, 5 Nov)
   // one-off: Chef by 10 pm instead of 8 pm for these cooks on these days (Mama, 7 Nov 18:05: Maya cooking)
   const CHEF_10 = { "2026-11-07": ["Maya"] };
-  const chefCut = (p, d) => (CHEF_10[d] || []).includes(p) ? onTimeBy(d) : CHEF_BY;
+  // from Wed 11 Nov the cook's pink is the same 11 pm rule as everyone; Chef done by 8 pm earns a separate 🍳 (Mama, 11 Nov 22:38)
+  const CHEF_REWARD_FROM = "2026-11-11";
+  const chefCut = (p, d) => d >= CHEF_REWARD_FROM || (CHEF_10[d] || []).includes(p) ? onTimeBy(d) : CHEF_BY;
+  function chefBy8(p, d, tiles) { const c = (tiles || nightTiles(d)).filter(t => t.p === p && t.a.chore === "cook"); if (!c.length) return null; return c.every(t => { const at = doneAtMs(t.id), x = S.done[t.id]; return at && at < cutoffMs(d, CHEF_BY) && !(x && x.covered && x.person !== p); }); }
+  function chefWeek(p) { const w = fireWeek(); let n = 0, of = 0; for (let d = w.from < CHEF_REWARD_FROM ? CHEF_REWARD_FROM : w.from; d <= S.today; d = E.addDays(d, 1)) { const r = chefBy8(p, d); if (r === null) continue; of++; if (r) n++; } return { n, of }; }
   const tileCut = (a) => a && a.chore === "cook" ? chefCut(effPerson(a), a.date) : 0; // 0 = the night's own cutoff (cutoffMs → onTimeBy(d))
   const REWARD_SEED = ["Special Dessert", "Going to thrift", "Skincare shopping", "Ghibli night", "Friends over with Tata cooking", "Paid Uber (under $15)", "Onigiri treat"];
   // the shared reward menu: seed ideas (hideable) + anything the family adds in 🎁 Rewards
@@ -1078,7 +1082,7 @@
   function nightOf(p, d, tiles) {
     let mine = (tiles || nightTiles(d)).filter(t => t.p === p); if (!mine.length) return null;
     // Tata's night is only Chef by 8 pm on the nights he cooks (Mama, 5 Nov 22:05)
-    if (p === "Tata" && mine.some(t => t.a.chore === "cook")) mine = mine.filter(t => t.a.chore === "cook");
+    if (p === "Tata" && d < CHEF_REWARD_FROM && mine.some(t => t.a.chore === "cook")) mine = mine.filter(t => t.a.chore === "cook"); // until 10 Nov only; from 11 Nov all his jobs by 11 pm
     let allDone = true, allOnTime = true;
     for (const t of mine) { const at = doneAtMs(t.id), cv = S.done[t.id] && S.done[t.id].covered && S.done[t.id].person !== p; if (!at) { allDone = false; allOnTime = false; } else if (cv || at >= cutoffMs(d, t.cut)) allOnTime = false; } // 🛟 covered by someone else = no pink (Mama, 6 Nov 22:07)
     return allOnTime ? "hit" : allDone ? "late" : "open";
@@ -1091,7 +1095,7 @@
     for (let d = w.from; d <= S.today; d = E.addDays(d, 1)) { const r = nightOf(p, d); if (r === "hit" || (r === null && freeNight(p, d))) n++; }
     return n;
   }
-  const fireTxt = (p) => "🔥" + streakOf(p) + "/" + fireWeek().of;
+  const fireTxt = (p) => { const c = chefWeek(p); return "🔥" + streakOf(p) + "/" + fireWeek().of + (c.of ? " · 🍳" + c.n : ""); }; // 🍳 = nights the Chef was done by 8 pm this week (shown once the person has cooked this week)
   function weekScore(p, week) {
     let hit = 0, n = 0; for (let i = 0; i < 7; i++) { const d = E.addDays(week, i); if (d > S.today || (R.startDate && d < R.startDate) || d < BEFORE10_START) continue; const r = nightOf(p, d); if (r === null) continue; if (d === S.today && r === "open") continue; n++; if (r === "hit") hit++; }
     return { hit, n };
@@ -2026,7 +2030,7 @@
     const claimed = a.auto && S.done[a.id + ":override"];
     const isAuto = a.auto && !claimed && !S.done[a.id] && st !== "cancelled";
     const t = h("div", { class: "tile " + (cls || "") + " " + (isAuto ? "auto" : st) + (a.kind === "zone" && S.done[dayId(a) + ":skip"] ? " cancelled" : "") + (S.running[a.id] ? " running" : "") },
-      h("div", { class: "k" }, a.label), nameEl(a, a.unassigned && !S.done[a.id + ":override"] ? (a.note || "not set") : (R.people[effPerson(a)] || {}).label || "—"), mealLine(a), h("div", { class: "s" }, isAuto ? "Done by 8 pm" : sub(a, st)), h("div", { class: "s", style: "color:var(--ink);margin-top:2px" }, R.short[a.chore] || ""),
+      h("div", { class: "k" }, a.label), nameEl(a, a.unassigned && !S.done[a.id + ":override"] ? (a.note || "not set") : (R.people[effPerson(a)] || {}).label || "—"), mealLine(a), h("div", { class: "s" }, isAuto ? "🍳 Done by 8 pm" : sub(a, st)), h("div", { class: "s", style: "color:var(--ink);margin-top:2px" }, R.short[a.chore] || ""),
       a.unassigned ? null : h("div", { class: "acts" }, isAuto ? [].concat(acts(a, st), S.me !== a.person ? [h("button", { class: "btn ghost", onclick: () => asWho(R.order.filter(p => p !== a.person), "Who's cooking tonight?", (p) => override(a, p, "claim")) }, "I'll cook")] : []) : [].concat(acts(a, st), unclaimBtn(a, st) || [])));
     fx(t, a); markLate(t, a);
     longPress(t, () => sheetFor(a)); mealMark(t, a);
@@ -2069,7 +2073,7 @@
       const t = h("div", { class: "bstep " + (isAuto ? "auto" : st) + "" + (S.pomo[a.id] ? " running" : "") },
         h("div", { class: "k" }, a.label),
         nameEl(a, a.unassigned && !S.done[a.id + ":override"] ? (a.note || "not set") : (R.people[effPerson(a)] || {}).label || "—"),
-        mealLine(a), h("div", { class: "s" }, isAuto ? "Done by 8 pm" : sub(a, st)),
+        mealLine(a), h("div", { class: "s" }, isAuto ? "🍳 Done by 8 pm" : sub(a, st)),
         a.unassigned ? null : h("div", { class: "acts" }, isAuto ? [].concat(acts(a, st), S.me !== a.person ? [h("button", { class: "btn ghost sm", onclick: () => asWho(R.order.filter(p => p !== a.person), "Who's cooking tonight?", (p) => override(a, p, "claim")) }, "I'll cook")] : []) : [].concat(acts(a, st), unclaimBtn(a, st) || [])));
       fx(t, a); markLate(t, a); longPress(t, () => sheetFor(a)); mealMark(t, a); return t;
     })));
@@ -2189,7 +2193,7 @@
       if (r === "hit") { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "All done tonight ✨", h("div", { style: "font-size:13px;font-weight:500" }, (nightTiles(S.today).some(t => t.p === S.me && t.a.chore === "cook") && chefCut(S.me, S.today) === CHEF_BY ? "Chef before 8 pm" : "Before 11 pm") + " · " + fireTxt(S.me) + " this week"))); confetti("me:" + S.me + ":" + S.today); }
       else if (r === null && freeNight(S.me, S.today)) { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "All done tonight ✨", h("div", { style: "font-size:13px;font-weight:500" }, "Nothing due tonight · " + fireTxt(S.me) + " this week"))); confetti("me:" + S.me + ":" + S.today); }
       else if (r === "late") main.appendChild(h("div", { class: "note", style: "margin-bottom:8px" }, "Done ✓ · but late, so tonight doesn't count for " + fireTxt(S.me) + "."));
-      else if (r === "open") main.appendChild(h("div", { class: "note", style: "margin-bottom:8px" }, fireTxt(S.me) + " this week · " + (nightTiles(S.today).some(t => t.p === S.me && t.a.chore === "cook") && chefCut(S.me, S.today) === CHEF_BY ? (S.me === "Tata" ? "Chef done by 8 pm" : "Chef done by 8 pm, the rest before 11 pm,") : "finish everything before 11 pm") + " to add tonight.")); }
+      else if (r === "open") main.appendChild(h("div", { class: "note", style: "margin-bottom:8px" }, fireTxt(S.me) + " this week · " + (nightTiles(S.today).some(t => t.p === S.me && t.a.chore === "cook") && chefCut(S.me, S.today) === CHEF_BY ? (S.me === "Tata" ? "Chef done by 8 pm" : "Chef done by 8 pm, the rest before 11 pm,") : "finish everything before 11 pm") + " to add tonight." + (chefBy8(S.me, S.today) === false && new Date().getHours() < CHEF_BY ? " Chef done by 8 pm adds a 🍳." : ""))); }
     { const ur = todosOf(S.me).filter(isUrgTodo); if (ur.length) main.appendChild(h("div", { class: "todourg" }, h("div", { class: "label" }, "🔴 Urgent · " + ur.length), ur.map(todoRow))); }
     { const wc = wishCards(); if (wc) main.appendChild(wc); }
     { const kc = kindCards(); if (kc) main.appendChild(kc); }
