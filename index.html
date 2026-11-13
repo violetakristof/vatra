@@ -367,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794455456"></script>
-<script src="./engine.js?v=1794455456"></script>
-<script>window.VATRA_BUILD="1794455456";</script>
+<script src="./rules.js?v=1794541138"></script>
+<script src="./engine.js?v=1794541138"></script>
+<script>window.VATRA_BUILD="1794541138";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1234,7 +1234,12 @@
     if (!open) return row;
     const days = []; for (let i = 0; i < 7; i++) days.push(E.addDays(S.today, i));
     const canDel = x.by === S.me || S.me === "Mama" || S.me === "Tata" || isBoard();
+    /* ✎ rename a meal idea (Mama, 12 Nov 22:37: "I want to be able to edit the meal choices") */
+    const ren = h("input", { type: "text", value: x.text, enterkeyhint: "done" });
+    const saveRen = async () => { const t = ren.value.trim(); if (!t || t === x.text) { ren.focus(); return; } S._shopEdit = null; await store.writeShop(Object.assign({}, x, { text: t })); refreshShopSheet(); render(); };
+    ren.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); saveRen(); } });
     const ed = h("div", { class: "shopedit" },
+      canDel ? h("div", { class: "shopadd", style: "margin-bottom:8px" }, ren, h("button", { class: "btn", onclick: saveRen }, "✎ Save")) : null,
       canPlan() ? h("button", { class: "btn sm", onclick: () => { S._shopEdit = null; planMeal(x, S.today); } }, "🍲 Cook tonight") : null,
       canPlan() ? h("div", { class: "pick", style: "margin:6px 0" }, days.slice(1).map(d => h("button", { class: x.mealDate === d ? "on" : "", onclick: () => { S._shopEdit = null; planMeal(x, d); } }, dayChip(d)))) : null,
       canPlan() && x.mealDate && x.mealDate >= S.today ? h("button", { class: "btn quiet sm", onclick: () => { S._shopEdit = null; planMeal(x, null); } }, "Not planned") : null,
