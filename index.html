@@ -367,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794777000"></script>
-<script src="./engine.js?v=1794777000"></script>
-<script>window.VATRA_BUILD="1794777000";</script>
+<script src="./rules.js?v=1794780600"></script>
+<script src="./engine.js?v=1794780600"></script>
+<script>window.VATRA_BUILD="1794780600";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -429,7 +429,7 @@
     me: localStorage.getItem("vatra.me") || null,
     tab: (localStorage.getItem("vatra.me") && localStorage.getItem("vatra.me") !== "Board") ? "mine" : "tonight",
     db: null, dbState: "loading", // loading | ok | none
-    week: null, nextWeek: null, ideas: [], shop: [], asks: [], todos: [], todoErr: false, rewards: [], mess: [], gone: {}, sheetKeep: false, done: {}, laundry: null, away: {}, settings: {}, streaks: {},
+    week: null, nextWeek: null, ideas: [], shop: [], asks: [], todos: [], gym: [], todoErr: false, rewards: [], mess: [], gone: {}, sheetKeep: false, done: {}, laundry: null, away: {}, settings: {}, streaks: {},
     running: JSON.parse(localStorage.getItem("vatra.running") || "{}"),
     pomo: JSON.parse(localStorage.getItem("vatra.pomo") || "{}"),
     today: todayStr(),
@@ -471,6 +471,9 @@
     async writeAsk(x) { const i = S.asks.findIndex(y => y.id === x.id); if (i >= 0) S.asks[i] = x; else S.asks.push(x); render(); if (S.db) await S.db.doc("asks/" + docId(x.id)).set(x); else { const l = local.get("asks") || {}; l[x.id] = x; local.set("asks", l); } },
     async deleteAsk(id) { S.asks = S.asks.filter(y => y.id !== id); S.gone[id] = Date.now(); render(); if (S.db) await delDoc("asks/" + docId(id), { id }); else { const l = local.get("asks") || {}; delete l[id]; local.set("asks", l); } },
     async writeTodo(x) { const i = S.todos.findIndex(y => y.id === x.id); if (i >= 0) S.todos[i] = x; else S.todos.push(x); render(); try { if (S.db) await S.db.doc("todos/" + docId(x.id)).set(x); else { const l = local.get("todos") || {}; l[x.id] = x; local.set("todos", l); } } catch (e) { S.todoErr = true; render(); } },
+    // 🏋️ gym visits and "paid" marks are stored in the todos collection (the database already allows it), marked gym: true
+    async writeGym(x) { delete S.gone[x.id]; S.gym = S.gym.filter(y => y.id !== x.id).concat([x]); render(); try { if (S.db) await S.db.doc("todos/" + docId(x.id)).set(x); else { const l = local.get("todos") || {}; l[x.id] = x; local.set("todos", l); } } catch (e) { S.todoErr = true; render(); } },
+    async deleteGym(id) { S.gym = S.gym.filter(y => y.id !== id); S.gone[id] = Date.now(); render(); try { if (S.db) await delDoc("todos/" + docId(id), { id }); else { const l = local.get("todos") || {}; delete l[id]; local.set("todos", l); } } catch (e) { S.todoErr = true; render(); } },
     async deleteTodo(id) { S.todos = S.todos.filter(y => y.id !== id); S.gone[id] = Date.now(); render(); try { if (S.db) await delDoc("todos/" + docId(id), { id }); else { const l = local.get("todos") || {}; delete l[id]; local.set("todos", l); } } catch (e) { S.todoErr = true; render(); } },
     async writeSettings(patch) { S.settings = Object.assign({}, S.settings, patch); if (S.db) await S.db.doc("settings/main").set(S.settings); else local.set("settings", S.settings); render(); },
     async log(entry) { entry.at = new Date().toISOString(); entry.week = monday(); if (S.db) await S.db.collection("log").add(entry); else { const l = local.get("log") || []; l.push(entry); local.set("log", l); } },
@@ -549,7 +552,7 @@
     S.mess = Object.values(local.get("mess") || {});
     S.shop = Object.values(local.get("shop") || {});
     S.asks = Object.values(local.get("asks") || {});
-    S.todos = Object.values(local.get("todos") || {});
+    { const all = Object.values(local.get("todos") || {}); S.todos = all.filter(b => !b.gym); S.gym = all.filter(b => b.gym); }
     S.laundry = local.get("laundry"); S.away = local.get("away") || {}; S.settings = local.get("settings") || {};
   }
   function subscribe() {
@@ -562,7 +565,7 @@
     db.doc("state/laundry").onSnapshot(s => { S.laundry = s.exists ? s.data() : null; render(); }, () => {});
     db.doc("state/away").onSnapshot(s => { S.away = s.exists ? s.data() : {}; render(); }, () => {});
     db.collection("asks").onSnapshot(s => { S.asks = s.docs.map(d => d.data()).filter(b => live(b) && !S.gone[b.id]); render(); }, () => {});
-    db.collection("todos").onSnapshot(s => { S.todoErr = false; S.todos = s.docs.map(d => d.data()).filter(b => live(b) && !S.gone[b.id]); render(); }, () => { S.todoErr = true; render(); });
+    db.collection("todos").onSnapshot(s => { S.todoErr = false; const all = s.docs.map(d => d.data()).filter(b => live(b) && !S.gone[b.id]); S.todos = all.filter(b => !b.gym); S.gym = all.filter(b => b.gym); render(); }, () => { S.todoErr = true; render(); });
     db.collection("shop").onSnapshot(s => { S.shop = s.docs.map(d => d.data()).filter(b => live(b) && !S.gone[b.id]); render(); refreshShopSheet(); }, () => {});
     db.collection("mess").onSnapshot(s => { S.mess = s.docs.map(d => d.data()).filter(b => live(b) && !S.gone[b.id]); render(); }, () => {});
     db.collection("rewards").onSnapshot(s => { S.rewards = s.docs.map(d => d.data()).filter(b => live(b) && !S.gone[b.id]); render(); refreshRewardSheet(); }, () => {});
@@ -1692,6 +1695,57 @@
       ex ? null : openAsksBox());
     S.sheetKeep = true;
   }
+  // ---------- 🏋️ Gym (Mama, 15 Nov 17:00-17:05) ----------
+  // Everyone but Maya logs visits (one per day, optional note). Sofia and Corvin: per week (Sun to Sat), 4+ visits = Mama pays,
+  // 3 = they pay half the week, fewer = they pay the week. A week is the monthly fee / 4. Mama and Tata just log.
+  const GYM_FEE = { Sofia: 212, Corvin: 28.73 }, GYM_GOAL = 4, GYM_FROM = "2026-11-16"; // first counted week: Sun 15 to Sat 21 Nov
+  const gymPeople = () => R.order.filter(p => p !== "Maya");
+  const gymMoney = (n) => "$" + n.toFixed(2);
+  const gymOf = (p, wk) => S.gym.filter(x => x.kind === "visit" && !x.deleted && x.person === p && weekOfDate(x.date) === wk).sort((a, b) => (a.date < b.date ? -1 : 1));
+  const gymOwes = (p, n) => { const f = GYM_FEE[p]; if (!f) return 0; return n >= GYM_GOAL ? 0 : n === GYM_GOAL - 1 ? f / 8 : f / 4; };
+  const gymPaid = (p, wk) => S.gym.find(x => x.kind === "paid" && !x.deleted && x.person === p && x.week === wk);
+  const gymWeekOver = (wk) => wkDates(wk)[6] < S.today;
+  const gymTerms = (p) => GYM_FEE[p] ? GYM_GOAL + " or more: Mama pays. " + (GYM_GOAL - 1) + ": " + R.people[p].label + " pays " + gymMoney(GYM_FEE[p] / 8) + ". Fewer: " + gymMoney(GYM_FEE[p] / 4) + "." : "";
+  function gymRow(p) {
+    const v = gymOf(p, monday()), today = v.find(x => x.date === S.today), last = v[v.length - 1];
+    return h("div", { class: "list", style: "margin-bottom:10px" }, h("div", { class: "li" + (v.length >= GYM_GOAL ? " done" : "") },
+      h("div", {}, h("div", { class: "n" }, "🏋️ Gym"), h("div", { class: "s" }, v.length + " of " + GYM_GOAL + " this week" + (today ? " · today ✓" : "") + (last && last.note ? " · last: " + last.note : ""))),
+      h("button", { class: "btn" + (today ? " quiet" : ""), onclick: () => gymSheet(p) }, today ? "Open" : "Log")));
+  }
+  function gymSheet(p, day) {
+    const wk = monday(), days = wkDates(wk).filter(d => d <= S.today), v = gymOf(p, wk);
+    let sel = day && days.includes(day) ? day : S.today;
+    const can = isBoard() || isMgr() || S.me === p;
+    const inp = h("input", { type: "text", placeholder: "optional: shoulders + glutes, run + upper body", enterkeyhint: "done", style: "width:100%;font:inherit;font-size:16px;padding:10px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);box-sizing:border-box" });
+    inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
+    const ex = () => v.find(x => x.date === sel);
+    const saveBtn = h("button", { class: "btn", onclick: async () => { const e0 = ex(); await store.writeGym(Object.assign({ id: "gym_" + p + "_" + sel, gym: true, kind: "visit", person: p, date: sel, by: S.me, at: new Date().toISOString() }, e0 || {}, { note: inp.value.trim() || null })); gymSheet(p, sel); } });
+    const dayRow = h("div", { class: "pick" });
+    const draw = () => { dayRow.innerHTML = ""; for (const d of days) dayRow.appendChild(h("button", { class: d === sel ? "on" : "", onclick: () => { sel = d; draw(); } }, (d === S.today ? "Today" : E.dow(d)) + (v.some(x => x.date === d) ? " ✓" : ""))); const e0 = ex(); inp.value = e0 && e0.note ? e0.note : ""; saveBtn.textContent = e0 ? "Save note" : "I went · log it"; };
+    draw();
+    const owe = gymOwes(p, v.length);
+    sheet(h("h3", {}, "🏋️ Gym · " + R.people[p].label),
+      h("p", { class: "note" }, v.length + " of " + GYM_GOAL + " this week." + (GYM_FEE[p] ? " " + gymTerms(p) + (owe ? " So far this week: " + gymMoney(owe) + "." : " This week is covered.") : "")),
+      can ? h("div", {}, h("div", { class: "label" }, "Which day"), dayRow) : null,
+      can ? h("div", {}, h("div", { class: "label" }, "What you did"), inp) : null,
+      can ? saveBtn : null,
+      h("div", { class: "label" }, "This week"),
+      v.length ? h("div", { class: "list" }, v.map(x => h("div", { class: "li" }, h("div", {}, h("div", { class: "n" }, fmtDay(x.date)), h("div", { class: "s" }, x.note || "no note")),
+        can ? h("button", { class: "btn quiet sm xbtn", title: "Remove this visit", onclick: async () => { await store.deleteGym(x.id); gymSheet(p, sel); } }, "✕") : null))) : h("p", { class: "note" }, "No visits yet."),
+      (() => { const prev = [1, 2, 3].map(i => E.addDays(wk, -7 * i)).filter(w => w >= GYM_FROM).map(w => [w, gymOf(p, w)]).filter(([, xs]) => xs.length);
+        return prev.length ? h("div", {}, h("div", { class: "label" }, "Earlier weeks"), h("div", { class: "list" }, prev.map(([w, xs]) => h("div", { class: "li" }, h("div", {}, h("div", { class: "n" }, "Week of " + fmtDay(wkDates(w)[0]).replace(/^\w+, /, "") + " · " + xs.length + " of " + GYM_GOAL), h("div", { class: "s" }, xs.map(x => E.dow(x.date) + (x.note ? " " + x.note : "")).join(" · "))))))) : null; })());
+    S.sheetKeep = true;
+  }
+  function gymReview(W) {
+    if (W.week < GYM_FROM) return null;
+    const over = gymWeekOver(W.week);
+    const rows = gymPeople().map(p => { const v = gymOf(p, W.week), n = v.length, fee = GYM_FEE[p], owe = gymOwes(p, n), pd = gymPaid(p, W.week);
+      return h("div", { class: "li" + (n >= GYM_GOAL ? " done" : "") }, h("div", {}, h("div", { class: "n" }, R.people[p].label + " · " + n + " of " + GYM_GOAL), h("div", { class: "s" }, v.map(x => E.dow(x.date) + (x.note ? " " + x.note : "")).join(" · ") || "no visits"),
+          fee ? h("div", { class: "s", style: "color:var(--ink)" }, owe ? (over ? R.people[p].label + " pays " : "so far: ") + gymMoney(owe) + (pd ? " · paid" : "") : "Mama pays this week") : null),
+        fee && owe && over && isMgr() ? (pd ? h("button", { class: "btn quiet sm", onclick: () => store.deleteGym(pd.id) }, "Undo") : h("button", { class: "btn sm", onclick: () => store.writeGym({ id: "gympaid_" + p + "_" + W.week, gym: true, kind: "paid", person: p, week: W.week, by: S.me, at: new Date().toISOString() }) }, "Paid")) : null); });
+    const owed = Object.keys(GYM_FEE).map(p => { let t = 0; for (let w = GYM_FROM; gymWeekOver(w); w = E.addDays(w, 7)) if (!gymPaid(p, w)) t += gymOwes(p, gymOf(p, w).length); return t ? R.people[p].label + " " + gymMoney(t) : null; }).filter(Boolean);
+    return h("div", {}, h("p", { class: "note" }, "Sunday to Saturday. " + GYM_GOAL + " or more visits: Mama pays. " + Object.keys(GYM_FEE).map(p => R.people[p].label + ": " + (GYM_GOAL - 1) + " visits " + gymMoney(GYM_FEE[p] / 8) + ", fewer " + gymMoney(GYM_FEE[p] / 4) + ".").join(" ") + (owed.length ? " Owed from finished weeks: " + owed.join(" · ") + "." : "")), h("div", { class: "list" }, rows));
+  }
   const todoErrBanner = () => S.todoErr ? h("div", { class: "banner" }, "To-dos could not be saved: the family database needs one more permission. Tell Claude.") : null;
 
   function askSheet(edit, pre) {
@@ -2123,6 +2177,7 @@
     if (doneChips.children.length) main.appendChild(foldBox("✓ Done today (" + doneChips.children.length + ")", [doneChips], "_boardDoneOpen"));
     { const eb = todoErrBanner(); if (eb) main.appendChild(eb);
       main.appendChild(sec("To-do · so we don't forget", h("div", { class: "btodo" }, R.order.map(p => { const tl = todosOf(p); return h("div", { class: "col", style: "border-top-color:" + PCOL[p] }, h("div", { class: "pn" }, pdot(p), plabel(p), tl.some(isUrgTodo) ? h("span", { style: "margin-left:auto;color:var(--red);font-size:14px" }, "🔴 " + tl.filter(isUrgTodo).length) : null), tl.length ? tl.map(todoRow) : h("div", { class: "note", style: "padding:0 2px" }, "—")); })))); }
+    main.appendChild(sec("🏋️ Gym this week · tap your name to log", h("div", { class: "pick" }, gymPeople().map(p => { const n = gymOf(p, monday()).length; return h("button", { class: n >= GYM_GOAL ? "on" : "", onclick: () => gymSheet(p) }, R.people[p].label + " " + n + "/" + GYM_GOAL); }))));
     main.appendChild(h("div", { class: "note", style: "text-align:right;font-size:11px" }, "Kitchen board · hold the 👤 pill to change this device"));
     const od = overdueList();
     if (od.length) main.appendChild(h("div", { class: "redrow", style: "background:var(--red);color:#fff;border-radius:12px;padding:10px 14px;gap:16px;flex-wrap:wrap;font-size:14px" }, od.map(o => h("span", {}, h("b", {}, R.people[o.person].label), " · " + o.what))));
@@ -2241,6 +2296,7 @@
     const row = (a) => { if (a._zoneDay) { const li = h("div", { class: "li future" }, h("div", {}, h("div", { class: "n" }, a.label + " · every day"), h("div", { class: "s" }, R.short[a.chore] || ""))); fx(li, a); return li; } const st = state(a); const li = h("div", { class: "li " + (a.kind === "zone" && !a.carried && zoneToday(a) && st !== "overdue" ? "done" : st) }, h("div", {}, h("div", { class: "n" }, a.label + (a.carried ? " · from last week" : a.kind === "zone" ? " · every day" : "")), mealLine(a), h("div", { class: "s" }, a.kind === "zone" && !a.carried ? zoneDaysTxt(a) : (sub(a, st) || (st === "future" ? "later" : ""))), h("div", { class: "s", style: "color:var(--ink)" }, R.short[a.chore] || "")), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end" }, a.kind === "zone" && !a.carried ? zoneActs(a) : acts(a, st))); fx(li, a); markLate(li, a, true); longPress(li, () => sheetFor(a)); mealMark(li, a); return li; };
     main.appendChild(h("div", {}, h("div", { class: "label", style: "color:var(--ink)" }, "Today · " + fmtDay(S.today)), h("div", { class: "list" }, ...(() => { const shopRows = (S.me === "Tata" && (shopOpenItems().some(x => isUrg(x)) || W.assignments.some(x => (x.chore === "shop" || x.chore === "costco") && (x.date === S.today || shopFri(x, S.today) || (!x.date && ["Sat", "Sun"].includes(E.dow(S.today)))))) ? [(() => { const open = shopOpenItems(); const li = h("div", { class: "li" + (open.some(x => isUrg(x)) ? " overdue" : "") }, h("div", {}, h("div", { class: "n" }, "🛒 Shopping list"), h("div", { class: "s" }, open.length + " to buy" + (open.some(x => isUrg(x)) ? " · " + open.filter(x => isUrg(x)).length + " urgent" : "") + (open.some(x => x.meal) ? " · " + open.filter(x => x.meal).length + " meal ideas" : ""))), h("button", { class: "btn", onclick: shopSheet }, "Open")); li.addEventListener("click", (e) => { if (e.target.tagName !== "BUTTON") shopSheet(); }); return li; })()] : []); const dr = null, late = false; const openT = todayList.filter(a => rank(a) < 3), doneT = todayList.filter(a => rank(a) >= 3); const rows = openT.map(row).concat(doneT.length ? [foldBox("✓ Done today (" + doneT.length + ")", doneT.map(row), "_doneOpen")] : []); const nLate = todayList.filter(lateOpen).length; // orange jobs above everything, even the 🛒 row (Mama, 5 Nov 22:08)
       return rows.slice(0, nLate).concat(late ? [dr] : [], shopRows, rows.slice(nLate), late || !dr ? [] : [dr]); })())));
+    if (gymPeople().includes(S.me)) main.appendChild(gymRow(S.me));
     { const all = todosOf(S.me), nOpen = all.filter(x => x.status !== "done").length, tl = all.filter(x => !isUrgTodo(x)), eb = todoErrBanner(); if (eb) main.appendChild(eb);
       main.appendChild(h("div", {}, h("div", { class: "label", style: "color:var(--ink)" }, "To-do" + (nOpen ? " · " + nOpen : "")), tl.length ? h("div", { class: "list" }, tl.map(todoRow)) : h("div", { class: "note" }, all.length ? "The rest is clear. Urgent ones are at the top." : "Nothing to remember. ➕ To-do adds one, for you or for someone else."))); }
     if (S._arrivalRow) { main.appendChild(S._arrivalRow); S._arrivalRow = null; }
@@ -2349,6 +2405,7 @@
         rows.push(h("div", { class: "li" }, h("div", {}, h("div", { class: "n" }, lab + ": standard " + s0 + " → " + sug + " min?"), h("div", { class: "s" }, xs.length + " answers, mostly " + (slow >= 3 ? "slower" : "faster") + " · middle answer " + med + " min")),
           S.me === "Mama" ? h("div", { style: "display:flex;gap:6px" }, h("button", { class: "btn sm", onclick: () => store.writeSettings({ std: Object.assign({}, STD, { [c]: sug }), stdKeep: Object.assign({}, KEEP, { [c]: S.today }) }) }, "Change"), h("button", { class: "btn quiet sm", onclick: () => store.writeSettings({ stdKeep: Object.assign({}, KEEP, { [c]: S.today }) }) }, "Keep")) : null)); }
       if (rows.length) main.appendChild(sec("Times to adjust", h("div", { class: "list" }, rows))); }
+    { const g = gymReview(W); if (g) main.appendChild(sec("🏋️ Gym", g)); }
     // My Room Reset, quiet daily tick
     { const resets = W.assignments.filter(a => a.chore === "roomReset" && a.date <= S.today); const by = {};
       for (const a of resets) { const p = effPerson(a); by[p] = by[p] || [0, 0, 0]; by[p][1]++; if (S.done[a.id]) by[p][0]++; if (doneLate(a)) by[p][2]++; }
