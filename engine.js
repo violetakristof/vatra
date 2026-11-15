@@ -29,6 +29,7 @@
     if (c.helper || / · helper/.test(c.label || "")) return m;
     if (c.split) return m; // a job Mama split between two people keeps the minutes she set (7 Nov 22:19)
     if (std[c.chore] == null) return m;
+    if (c.chore === "grandparents" && c.date && c.date < "2026-11-15" && m > 0) return 45; // visits before 15 Nov keep the old 45; from then the standard is 30 (Mama, 15 Nov 15:35)
     if (m === 0 && !(rules.ownCount || []).includes(c.chore)) return 0; // e.g. Chef tapped by Tata: the daily auto credit covers it
     if ((c.chore === "deepBath" || c.chore === "ensuite") && m > 0 && m < std[c.chore]) return m; // the helper tile keeps its 15
     return stdFor(rules, c.chore, c.person);
