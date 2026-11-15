@@ -168,7 +168,7 @@
       if (d === settings.shopDay) mk({ kind: "fixed", chore: "shop", label: "Costco", person: "Tata", window: "wknd", dueSun: true, minutes: 120, fixed: true }); // any time over the weekend, due Sunday (Mama, 6 Nov)
       // Costco merged into Shop as one weekly "Costco" (Mama, 7 Nov 21:42)
       const gp = gpPlan[d];
-      if (gp && rules.people[gp]) mk({ kind: "fixed", chore: "grandparents", label: "Grandparents", person: gp, date, due: date, minutes: 60, fixed: true, optional: true });
+      if (gp && rules.people[gp]) mk({ kind: "fixed", chore: "grandparents", label: "Grandparents", person: gp, date, due: date, minutes: 60, fixed: true });
       else if (gp !== "brother") mk({ kind: "fixed", chore: "grandparents", label: "Grandparents", person: null, note: "nobody free", date, due: date, minutes: 0, counts: false, unassigned: true });
       if (d === "Fri") for (const p of rules.order) mk({ kind: "own", chore: "menu", label: "Menu idea", person: p, date, due: date, minutes: 0, counts: false, own: true, closes: settings.menuCloses });
       for (const p of rules.order) if (p !== "Tata") mk({ kind: "own", chore: "roomReset", label: "My Room Reset", person: p, date, due: date, minutes: B.S, own: true, counts: false, quiet: true });

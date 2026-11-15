@@ -367,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794775300"></script>
-<script src="./engine.js?v=1794775300"></script>
-<script>window.VATRA_BUILD="1794775300";</script>
+<script src="./rules.js?v=1794777000"></script>
+<script src="./engine.js?v=1794777000"></script>
+<script>window.VATRA_BUILD="1794777000";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -618,8 +618,8 @@
     w.assignments = w.assignments.filter(x => !(x.chore === "ensuite" && / · helper/.test(x.label || "")) && x.chore !== "costco" && x.chore !== "monthly3" && x.chore !== "drawers" && !(x.chore === "kitchenDeep" && wkDoc.week >= "2026-11-09"))
       .map(x => x.chore === "shop" ? Object.assign({}, x, { label: "Costco" }) : x.chore === "monthly1" ? Object.assign({}, x, { chore: "kitchenDeep", label: "Kitchen deep" }) : x);
     w.assignments = w.assignments.map(x => STD[x.chore] && x.minutes > 0 ? Object.assign({}, x, { minutes: STD[x.chore] }) : x);
-    // Grandparents is not mandatory from Sun 15 Nov: optional like Sous-chef (dotted, Pass, never red, not needed for the 🔥; minutes count when done) (Mama, 15 Nov 15:34)
-    w.assignments = w.assignments.map(x => x.chore === "grandparents" && !x.unassigned && (x.date || x.due) >= "2026-11-15" ? Object.assign({}, x, { optional: true, minutes: x.minutes > 0 ? (STD.grandparents || R.std.grandparents) : x.minutes }) : x); // and about half an hour (15:35)
+    // Grandparents: 30 min from Sun 15 Nov
+    w.assignments = w.assignments.map(x => x.chore === "grandparents" && !x.unassigned && (x.date || x.due) >= "2026-11-15" ? Object.assign({}, x, { minutes: x.minutes > 0 ? (STD.grandparents || R.std.grandparents) : x.minutes }) : x); // about half an hour (15:35); mandatory again (Mama, 16:08: reversed the 15:34 optional)
     if (!w.assignments.some(x => x.chore === "garbage")) {
       for (let i = 0; i < 7; i++) { const date = E.addDays(wkDoc.week, i); if (R.startDate && date < R.startDate) continue;
         w.assignments.push({ id: wkDoc.week + "#garbage:" + date, week: wkDoc.week, kind: "fixed", chore: "garbage", label: "Garbage + recycling", person: "Corvin", date, due: date, minutes: 5, fixed: true }); }

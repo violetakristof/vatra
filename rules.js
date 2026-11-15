@@ -102,7 +102,7 @@ window.VATRA_RULES = {
     shop: "Weekly grocery shop, from the 🛒 Shopping list: groceries, urgent items and the meal ideas for next week. Tick each item Bought.",
     costco: "Costco run.",
     plants: "Water the plants.",
-    grandparents: "Visit the grandparents, about half an hour. Not mandatory. Bring the fruit home for lunches.",
+    grandparents: "Visit the grandparents, about half an hour. Bring the fruit home for lunches.",
     menu: "Friday morning, before noon: add one meal idea for next week in 🛒 Shop (tick Meal idea), so Tata can shop for it that day. Adding it ticks this tile.",
     review: "Five-minute weekly review: ledger, swaps and overrides, next week, lock.",
     admin: "Admin and finance.",
