@@ -369,7 +369,7 @@
 </style>
 <script src="./rules.js?v=1794541272"></script>
 <script src="./engine.js?v=1794541272"></script>
-<script>window.VATRA_BUILD="1794772500";</script>
+<script>window.VATRA_BUILD="1794772900";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1497,7 +1497,7 @@
       mine.length ? h("div", { style: "margin-top:6px" }, h("div", { class: "label" }, "🎁 Your wishes"), h("div", { class: "list" }, mine.map(x => h("div", { class: "li" }, h("div", {}, h("div", { class: "n" }, x.reward), h("div", { class: "s" }, "asked " + (R.people[x.from] || { label: x.from }).label + " · waiting for a job")),
         h("button", { class: "btn quiet sm", onclick: () => store.deleteAsk(x.id) }, "Withdraw"))))) : null);
   }
-  const ASK_ST = { wish: "wish, waiting for a job", pending: "waiting for an answer", countered: "counter offered", accepted: "accepted", declined: "declined", done: "done", withdrawn: "withdrawn" };
+  const ASK_ST = { wish: "wish, waiting for a job", pending: "waiting for an answer", countered: "counter offered", accepted: "accepted", declined: "declined", done: "done", withdrawn: "withdrawn", covered: "covered by someone else, no reward" };
   // a reward typed in an ask or a counter joins the 🎁 Rewards list
   function collectReward(text, by) { const t = (text || "").trim(); if (!t || rewardList().some(x => x.text.toLowerCase() === t.toLowerCase())) return; store.writeReward({ id: "rw_" + Date.now(), text: t, by, at: new Date().toISOString(), fromAsk: true }); }
   const dayShort = (d) => { if (d === S.today) return "today"; if (d === E.addDays(S.today, 1)) return "tomorrow"; const w = fmtDay(d).replace(/,.*/, ""); if (d > E.addDays(S.today, 6) || d < E.addDays(S.today, -6)) { const dt = new Date(d + "T12:00:00"); return w.slice(0, 3) + " " + dt.getDate() + " " + dt.toLocaleString("en-US", { month: "short" }); } return w; };
@@ -1972,6 +1972,7 @@
     const owner = effPerson(a), at = new Date().toISOString();
     if (a.kind === "zone" && !a.carried) { const k = dayId(a); await store.writeDone(k, { id: k, daily: true, zone: a.id, chore: a.chore, person: who, owner, covered: true, minutes: 0, counts: false, date: S.today, week: a.week, at, by: S.me, label: a.label }); }
     else await store.writeDone(a.id, { id: a.id, chore: a.chore, person: who, owner, covered: true, minutes: a.minutes || 0, measured: null, date: a.date || S.today, week: a.week, at, by: S.me, label: a.label });
+    if (a.ask) { const x = S.asks.find(y => y.id === a.askId); if (x) await store.writeAsk(Object.assign({}, x, { status: "covered", coveredBy: who, coveredAt: at })); } // covered Ask: no reward owed
     await store.log({ type: "cover", chore: a.chore, label: a.label, owner, by: who, date: S.today });
   }
   // 🤲 Helped: someone offered a hand with another person's job (Mama, 11 Nov 13:55: covered = they had to, helped = they offered).
@@ -1990,7 +1991,7 @@
   }
   const coverers = (a) => R.order.filter(p => p !== effPerson(a));
   function coverBtn(a, big) {
-    if (a.auto || a.unassigned || a.optional || a.ask || pastLocked(a)) return null;
+    if (a.auto || a.unassigned || a.optional || (a.ask && !isBoard() && !isMgr()) || pastLocked(a)) return null; // Mama can cover a red Ask too (15 Nov: Tata finished Corvin's shed job)
     const owner = effPerson(a); if (!owner) return null;
     const go = () => (isBoard() || isMgr()) ? pickWho(coverers(a), "Who covered " + (R.people[owner] || { label: owner }).label + "'s " + a.label + "?", async (p) => { await coverTile(a, p); closeSheet(); }) : coverTile(a, S.me).then(closeSheet);
     if (!isBoard() && !isMgr() && S.me === owner) return null;
