@@ -367,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794774000"></script>
+<script src="./rules.js?v=1794775000"></script>
 <script src="./engine.js?v=1794541272"></script>
-<script>window.VATRA_BUILD="1794774000";</script>
+<script>window.VATRA_BUILD="1794775000";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -618,6 +618,8 @@
     w.assignments = w.assignments.filter(x => !(x.chore === "ensuite" && / · helper/.test(x.label || "")) && x.chore !== "costco" && x.chore !== "monthly3" && x.chore !== "drawers" && !(x.chore === "kitchenDeep" && wkDoc.week >= "2026-11-09"))
       .map(x => x.chore === "shop" ? Object.assign({}, x, { label: "Costco" }) : x.chore === "monthly1" ? Object.assign({}, x, { chore: "kitchenDeep", label: "Kitchen deep" }) : x);
     w.assignments = w.assignments.map(x => STD[x.chore] && x.minutes > 0 ? Object.assign({}, x, { minutes: STD[x.chore] }) : x);
+    // Grandparents is not mandatory from Sun 15 Nov: optional like Sous-chef (dotted, Pass, never red, not needed for the 🔥; minutes count when done) (Mama, 15 Nov 15:34)
+    w.assignments = w.assignments.map(x => x.chore === "grandparents" && !x.unassigned && (x.date || x.due) >= "2026-11-15" ? Object.assign({}, x, { optional: true }) : x);
     if (!w.assignments.some(x => x.chore === "garbage")) {
       for (let i = 0; i < 7; i++) { const date = E.addDays(wkDoc.week, i); if (R.startDate && date < R.startDate) continue;
         w.assignments.push({ id: wkDoc.week + "#garbage:" + date, week: wkDoc.week, kind: "fixed", chore: "garbage", label: "Garbage + recycling", person: "Corvin", date, due: date, minutes: 5, fixed: true }); }
@@ -2356,7 +2358,7 @@
     for (const sw of swapsAll()) items.push([sw.date, "Swap " + sw.status + " · " + R.people[sw.from].label + " ↔ " + R.people[sw.to].label + " · " + sw.give.map(i => (A(i) || {}).label).join(" + ") + " for " + sw.take.map(i => (A(i) || {}).label).join(" + ")]);
     for (const o of Object.values(S.done).filter(d => d && d.override && d.week === W.week && d.type !== "swap")) items.push([o.date, (o.type === "claim" ? "Claimed" : "Reassigned") + " · " + (A(o.id.replace(":override", "")) || {}).label + " · " + (R.people[o.from] || {}).label + " → " + R.people[o.person].label]);
     for (const o of Object.values(S.done).filter(d => d && d.skip && !d.deleted && d.week === W.week)) items.push([o.date, "Cancelled · " + (o.label || o.chore) + " · " + ((R.people[o.person] || {}).label || "")]);
-    for (const o of Object.values(S.done).filter(d => d && d.pass && d.week === W.week)) items.push([o.date, "Passed · Sous-chef · " + R.people[o.person].label]);
+    for (const o of Object.values(S.done).filter(d => d && d.pass && d.week === W.week)) items.push([o.date, "Passed · " + (o.chore === "grandparents" ? "Grandparents" : "Sous-chef") + " · " + R.people[o.person].label]);
     for (const m of messList(W.week)) items.push([m.date, "Bathroom mess · " + R.people[m.person].label]);
     for (const o of Object.values(S.done).filter(d => d && (d.move || d.cancel) && d.week === W.week)) items.push([o.date, o.cancel ? "Laundry load " + (o.load + 1) + " cancelled" : "Laundry load " + (o.load + 1) + " moved to " + E.dow(o.date)]);
     const red = overdueList();
