@@ -369,7 +369,7 @@
 </style>
 <script src="./rules.js?v=1794541272"></script>
 <script src="./engine.js?v=1794541272"></script>
-<script>window.VATRA_BUILD="1794541272";</script>
+<script>window.VATRA_BUILD="1794772500";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -2515,7 +2515,7 @@
   }
   function redColumn(od) {
     return h("div", { class: "redcol" }, h("div", { class: "label" }, "Overdue"), od.map(o => h("div", { class: "redtile" }, h("div", { class: "n" }, R.people[o.person].label), h("div", { class: "w" }, o.what), h("div", { class: "s" }, o.laundry ? "over 24 h" : "since " + fmtDay(o.since).replace(/,.*/, "")),
-      o.a && isMgr() ? h("div", { class: "acts" }, h("button", { class: "btn sm", onclick: () => finish(o.a) }, "Done"), cancelBtn(o.a, "overdue")) : null)),
+      o.a && isMgr() ? h("div", { class: "acts" }, h("button", { class: "btn sm", onclick: () => finish(o.a) }, "Done"), coverBtn(o.a, false), cancelBtn(o.a, "overdue")) : null)),
       h("div", { class: "foot" }, "Stays here until tapped done. Never reassigned on its own."));
   }
 
