@@ -367,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794541272"></script>
+<script src="./rules.js?v=1794774000"></script>
 <script src="./engine.js?v=1794541272"></script>
-<script>window.VATRA_BUILD="1794772900";</script>
+<script>window.VATRA_BUILD="1794774000";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -440,6 +440,7 @@
   const FIRST_SUN = "2026-11-09"; // the 9 Nov week already starts Sunday 8: same assignments, today's Sunday jobs join it (Mama, 8 Nov 02:47)
   const wkStart = (wk) => wk >= FIRST_SUN ? E.addDays(wk, -1) : wk;
   const wkDates = (wk) => (wk === "2026-11-02" ? [0, 1, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5, 6]).map(i => E.addDays(wkStart(wk), i)); /* the 2 Nov week ends Sat 7: its Sunday 8 jobs moved to the 9 Nov week */
+  const weekOfDate = (d) => E.mondayOf(d >= E.addDays(FIRST_SUN, -1) ? E.addDays(d, 1) : d); // week key for any date: Sunday belongs to the week that follows it
   const monday = () => E.mondayOf(S.today >= E.addDays(FIRST_SUN, -1) ? E.addDays(S.today, 1) : S.today);
   const SUN8 = "2026-11-08"; let _sun8 = [];
   const shopFri = (a, d) => a.chore === "shop" && !a.date && a.due && a.due >= "2026-11-13" && (d === a.due || d === E.addDays(a.due, -1)); /* Costco shows Friday and Saturday, due Saturday (Mama, 8 Nov 03:01) */
@@ -993,7 +994,9 @@
   const isLateAt = (hr) => E.ymd(new Date()) !== S.today || new Date().getHours() >= hr;
   const isLate = () => isLateAt(LATE_FROM);
   const SHOP_LATE = 16; // Shop goes orange Sunday 4 pm, so there is still time for Costco (Mama, 6 Nov)
-  const lateFor = (a) => a && a.chore === "shop" ? isLateAt(SHOP_LATE) : isLate();
+  const ROOM_BY = 20, ROOM_BY_FROM = "2026-11-15"; // My Room Reset is due before dinner, 8 pm; after that it still counts but is marked late (Mama, 15 Nov 15:09)
+  const roomBy = (a) => !!a && a.chore === "roomReset" && (a.date || a.due || S.today) >= ROOM_BY_FROM;
+  const lateFor = (a) => a && a.chore === "shop" ? isLateAt(SHOP_LATE) : roomBy(a) ? isLateAt(ROOM_BY) : isLate();
   function lateOpen(a) {
     if (!a || !lateFor(a) || a.optional || a.auto || a.unassigned || a.bathDay || (a.quiet && a.chore !== "roomReset") || (a.own && a.chore !== "roomReset")) return false;
     if (a.kind === "zone") return !zoneToday(a) && state(a) !== "done";
@@ -1010,7 +1013,7 @@
   }
   const markLate = (el, a, noMissed) => {
     let tag = null;
-    if (lateOpen(a)) { el.classList.add("late"); tag = h("div", { class: "latetag" }, a.chore === "shop" && !isLate() ? "SHOP TODAY · still time for Costco" : "LATE · still counts until 6 am"); }
+    if (lateOpen(a)) { el.classList.add("late"); tag = h("div", { class: "latetag" }, a.chore === "shop" && !isLate() ? "SHOP TODAY · still time for Costco" : roomBy(a) && !isLate() ? "AFTER 8 PM · still counts, marked late" : "LATE · still counts until 6 am"); }
     else if (state(a) === "overdue") tag = h("div", { class: "redtag" }, "NOT DONE · since " + fmtDay(a.due || a.date).replace(/,.*/, ""));
     else if (false && !noMissed && missedYesterday(a)) tag = h("div", { class: "redtag" }, "MISSED " + E.dow(E.addDays(S.today, -1)) + " · counted as not done");
     if (tag) { const anchor = el.querySelector(".ftag") || el.querySelector(".n") || el.querySelector(".k"); if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(tag, anchor.nextSibling); else el.prepend(tag); }
@@ -1101,7 +1104,8 @@
     return { hit, n };
   }
   const isNightTile = (a) => !!a && (a.ask || ((a.date || a.due) && !a.optional && (!a.auto || a.chore === "cook") && a.kind !== "arrival" && a.kind !== "streak" && a.chore !== "menu" && a.kind !== "zone" && (!a.own || NIGHT_OWN.includes(a.chore))));
-  const doneLate = (a) => { if (!isNightTile(a)) return false; const at = doneAtMs(a.id); return !!at && at >= cutoffMs(a.date || a.due, tileCut(a)); };
+  const lateCut = (a) => roomBy(a) ? ROOM_BY : tileCut(a); // label only: the 🔥 night still uses tileCut
+  const doneLate = (a) => { if (!isNightTile(a)) return false; const at = doneAtMs(a.id); return !!at && at >= cutoffMs(a.date || a.due, lateCut(a)); };
   const BLUE = ["#1E5AA8", "#3B82F6", "#7FB3F5", "#BFDBFE", "#0EA5E9", "#FFFFFF"]; // 🍳 Chef by 8 pm (Mama, 11 Nov 22:41: "give him blue confetti")
   function chefConfetti(d) { for (const p of R.order) if (chefBy8(p, d) === true && (isBoard() || p === S.me)) confetti("chef:" + p + ":" + d, BLUE); }
   function confetti(key, colors) {
@@ -1135,7 +1139,7 @@
       if (a.optional && !dn) continue;
       seen[a.id] = 1;
       const at = dn ? Date.parse(dn.at || "") || 0 : 0;
-      out.push({ a, cover: dn && dn.covered && dn.person !== p ? dn.person : null, label: a.bathDay ? a.label.replace(/ · \w+$/, "") : a.label, st: dn ? "done" : sk ? "cancelled" : "open", at, late: at && isNightTile(a) && at >= cutoffMs(d, tileCut(a)), cook: a.chore === "cook" });
+      out.push({ a, cover: dn && dn.covered && dn.person !== p ? dn.person : null, label: a.bathDay ? a.label.replace(/ · \w+$/, "") : a.label, st: dn ? "done" : sk ? "cancelled" : "open", at, late: at && isNightTile(a) && at >= cutoffMs(d, lateCut(a)), cook: a.chore === "cook" });
     }
     const rank = { open: 0, done: 1, cancelled: 2 };
     return out.sort((x, y) => rank[x.st] - rank[y.st] || x.at - y.at);
@@ -1351,27 +1355,27 @@
   const messArea = (a) => a.kind === "zone" ? a.label.replace(/ · .*/, "") : null;
   const messToday = (area) => S.mess.filter(m => m.area === area && m.date === S.today && !m.deleted);
   function messBtn(a) {
-    const area = messArea(a); if (!area) return null;
+    const area = messArea(a); if (!area || !isMgr()) return null; // only Mama flags (Mama, 15 Nov 15:09)
     const ms = messToday(area);
-    return h("button", { class: "btn quiet sm messbtn", title: "Found " + area + " messy? Report it", onclick: (e) => { e.stopPropagation(); messSheet(area, a.chore); } }, ms.length ? "🧽 " + ms.length : "🧽 Mess");
+    return h("button", { class: "btn quiet sm messbtn", title: "Found " + area + " messy? Report it", onclick: (e) => { e.stopPropagation(); messSheet(area, a.chore, effPerson(a)); } }, ms.length ? "🧽 " + ms.length : "🧽 Mess");
   }
-  function messSheet(area, chore) {
-    const st = { who: undefined, by: isBoard() ? null : S.me };
+  function messSheet(area, chore, owner) {
+    const st = { who: owner && owner !== S.me ? owner : undefined, by: isBoard() ? null : S.me }; // starts on this week's owner: the zone is theirs to keep clean all day
     const noteInp = h("input", { type: "text", placeholder: "optional, e.g. dishes in the sink", enterkeyhint: "done", style: "width:100%;font:inherit;font-size:16px;padding:10px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);box-sizing:border-box" });
     noteInp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); noteInp.blur(); } });
     const msg = h("div", { class: "note", style: "color:var(--red)" });
-    const pickRow = (key, opts) => { const btns = opts.map(([v, l]) => { const b = h("button", { class: "btn quiet sm", onclick: () => { st[key] = v; btns.forEach(o => o.className = "btn " + (o === b ? "" : "quiet") + " sm"); } }, l); return b; }); return h("div", { style: "display:flex;gap:6px;flex-wrap:wrap" }, btns); };
+    const pickRow = (key, opts) => { const btns = opts.map(([v, l]) => { const b = h("button", { class: "btn " + (st[key] === v ? "" : "quiet") + " sm", onclick: () => { st[key] = v; btns.forEach(o => o.className = "btn " + (o === b ? "" : "quiet") + " sm"); } }, l); return b; }); return h("div", { style: "display:flex;gap:6px;flex-wrap:wrap" }, btns); };
     const send = async () => {
       if (!st.by) { msg.textContent = "Pick who found it."; return; }
       if (st.who === undefined) { msg.textContent = "Pick who left it, or Don't know."; return; }
-      await store.writeMess({ id: "mess_" + Date.now(), area, chore: chore || null, by: st.by, who: st.who, note: noteInp.value.trim() || null, date: S.today, at: new Date().toISOString() });
+      await store.writeMess({ id: "mess_" + Date.now(), area, chore: chore || null, by: st.by, who: st.who, owner: owner || null, note: noteInp.value.trim() || null, date: S.today, at: new Date().toISOString() });
       store.log({ type: "mess", area, by: st.by, who: st.who, date: S.today });
       closeSheet();
     };
     const earlier = messToday(area);
-    sheet(h("h3", {}, "🧽 " + area + " messy"), h("p", { class: "note" }, "Leave it how you found it. Reporting it records who left it messy, so it's fair to whoever has the area today. Nothing else happens; it's looked at in the Weekly review."),
+    sheet(h("h3", {}, "🧽 " + area + " messy"), h("p", { class: "note" }, "A flag means the area was not guest-ready when Mama walked by. It goes to this week's owner unless you pick someone else who left the mess. It shows in the Weekly review."),
       isBoard() ? h("div", {}, h("div", { class: "label" }, "Found by"), pickRow("by", R.order.map(p => [p, R.people[p].label]))) : null,
-      h("div", {}, h("div", { class: "label" }, "Who left it?"), pickRow("who", R.order.filter(p => p !== S.me || isBoard()).map(p => [p, R.people[p].label]).concat([[null, "Don't know"]]))),
+      h("div", {}, h("div", { class: "label" }, "Flag for"), pickRow("who", R.order.filter(p => p !== S.me || isBoard()).map(p => [p, R.people[p].label]).concat([[null, "Don't know"]]))),
       h("div", {}, h("div", { class: "label" }, "What was left"), noteInp),
       earlier.length ? h("p", { class: "note" }, "Already reported today: " + earlier.map(m => (m.who ? R.people[m.who].label : "unknown") + (m.note ? " (" + m.note + ")" : "")).join(", ")) : null,
       msg, h("div", { class: "sticky" }, h("button", { class: "btn", onclick: send }, "Report mess")));
@@ -1382,7 +1386,7 @@
     if (isBoard()) return null;
     const mine = S.mess.filter(m => m.who === S.me && !m.seen && m.date >= E.addDays(S.today, -2) && !m.deleted);
     if (!mine.length) return null;
-    return h("div", { style: "margin-bottom:10px" }, h("div", { class: "label" }, "🧽 Left messy"), h("div", { class: "list" }, mine.map(m => h("div", { class: "li overdue" }, h("div", {}, h("div", { class: "n" }, m.area + (m.note ? " · " + m.note : "")), h("div", { class: "s" }, "found by " + (R.people[m.by] || { label: m.by }).label + " · " + dayShort(m.date) + " · leave it how you found it")),
+    return h("div", { style: "margin-bottom:10px" }, h("div", { class: "label" }, "🧽 Left messy"), h("div", { class: "list" }, mine.map(m => h("div", { class: "li overdue" }, h("div", {}, h("div", { class: "n" }, m.area + (m.note ? " · " + m.note : "")), h("div", { class: "s" }, "found by " + (R.people[m.by] || { label: m.by }).label + " · " + dayShort(m.date) + (m.owner && m.who === m.owner ? " · your zone: keep it guest-ready all day" : " · leave it how you found it"))),
       h("button", { class: "btn quiet sm", onclick: () => store.writeMess(Object.assign({}, m, { seen: new Date().toISOString() })) }, "Got it")))));
   }
   // ---------- 🤲 I helped: log a kindness, it counts on your ledger and the person gets a thank-you card ----------
@@ -2294,7 +2298,7 @@
         h("div", { class: "note", style: "text-align:right" }, fmt(led[p].total)))),
       h("div", { class: "note" }, "Dark = fixed roles, light = rotating jobs. Spread across Maya, Sofia, Corvin, Mama: " + spread + " min."))));
     // daily zones, tracked
-    main.appendChild(sec("Zones, days done", h("div", { class: "list" }, W.assignments.filter(a => a.kind === "zone").map(a => { const ds = zoneDays(a).filter(d => d.week === W.week); const ms = ds.map(d => d.measured).filter(Boolean); return h("div", { class: "li" }, h("div", {}, h("div", { class: "n" }, a.label + " · " + R.people[effPerson(a)].label), h("div", { class: "s" }, zoneDaysTxt(a) + (ms.length ? " · avg " + Math.round(ms.reduce((x, y) => x + y, 0) / ms.length) + " min" : "")))); }))));
+    main.appendChild(sec("Zones, days done", h("div", { class: "list" }, W.assignments.filter(a => a.kind === "zone").map(a => { const ds = zoneDays(a).filter(d => d.week === W.week); const ms = ds.map(d => d.measured).filter(Boolean); return h("div", { class: "li" }, h("div", {}, h("div", { class: "n" }, a.label + " · " + R.people[effPerson(a)].label), h("div", { class: "s" }, zoneDaysTxt(a) + ((n) => n ? " · 🧽 " + n + " flag" + (n === 1 ? "" : "s") : "")(S.mess.filter(m => !m.deleted && weekOfDate(m.date) === W.week && m.area === messArea(a) && m.who === effPerson(a)).length) + (ms.length ? " · avg " + Math.round(ms.reduce((x, y) => x + y, 0) / ms.length) + " min" : "")))); }))));
     // requests
     { const wk = S.asks.filter(x => !x.gift && E.mondayOf(x.askedOn || x.date) === W.week).sort((a, b) => (a.at < b.at ? -1 : 1));
       if (wk.length) main.appendChild(sec("Requests (🙋 Ask)", h("div", { class: "list" }, wk.map(x => (x.from === S.me || S.me === "Mama") && !isBoard() ? askRow(x, true) : h("div", { class: "li" + (x.status === "declined" ? " overdue" : x.status === "done" ? " done" : "") }, h("div", {}, h("div", { class: "n" }, x.text), h("div", { class: "s" }, (R.people[x.from] || {}).label + " → " + (R.people[x.to] || {}).label + " · " + ASK_ST[x.status] + " · ~" + x.minutes + " min"))))))); }
@@ -2324,7 +2328,7 @@
       if (kd.length) main.appendChild(sec("🤲 Kindness", h("div", { class: "list" }, kd.map(x => h("div", { class: "li done" }, h("div", {}, h("div", { class: "n" }, (R.people[x.to] || { label: x.to }).label + " → " + (x.forHouse ? "the house" : (R.people[x.from] || { label: x.from }).label) + ": " + x.text), h("div", { class: "s" }, dayShort(x.date) + (x.minutes ? " · ~" + x.minutes + " min" : "") + (x.thanked ? " · thanked ❤️" : ""))),
         S.me === "Mama" ? h("button", { class: "btn quiet sm", title: "Remove", onclick: async () => { await store.deleteDone("ask:" + x.id); await store.deleteAsk(x.id); } }, "✕") : null))))); }
     // 🧽 messes found this week
-    { const wm = S.mess.filter(m => !m.deleted && E.mondayOf(m.date) === W.week).sort((a, b) => (a.at < b.at ? -1 : 1));
+    { const wm = S.mess.filter(m => !m.deleted && weekOfDate(m.date) === W.week).sort((a, b) => (a.at < b.at ? -1 : 1));
       if (wm.length) { const by = {}; for (const m of wm) { const k = m.who || "unknown"; by[k] = (by[k] || 0) + 1; }
         main.appendChild(sec("🧽 Messes found", h("div", {}, h("p", { class: "note" }, Object.keys(by).map(k => (k === "unknown" ? "Unknown" : R.people[k].label) + " " + by[k]).join(" · ") + ". Not a punishment: talk about what keeps happening."),
           h("div", { class: "list" }, wm.map(m => h("div", { class: "li" }, h("div", {}, h("div", { class: "n" }, m.area + " · left by " + (m.who ? R.people[m.who].label : "unknown")), h("div", { class: "s" }, dayShort(m.date) + " · found by " + (R.people[m.by] || { label: m.by }).label + (m.note ? " · " + m.note : ""))),
@@ -2345,8 +2349,8 @@
       if (rows.length) main.appendChild(sec("Times to adjust", h("div", { class: "list" }, rows))); }
     // My Room Reset, quiet daily tick
     { const resets = W.assignments.filter(a => a.chore === "roomReset" && a.date <= S.today); const by = {};
-      for (const a of resets) { const p = effPerson(a); by[p] = by[p] || [0, 0]; by[p][1]++; if (S.done[a.id]) by[p][0]++; }
-      if (Object.keys(by).length) main.appendChild(sec("My Room Reset, days done", h("div", { class: "list" }, Object.keys(by).map(p => h("div", { class: "li" }, h("div", { class: "n" }, R.people[p].label), h("div", { class: "s" }, by[p][0] + " of " + by[p][1] + " days")))))); }
+      for (const a of resets) { const p = effPerson(a); by[p] = by[p] || [0, 0, 0]; by[p][1]++; if (S.done[a.id]) by[p][0]++; if (doneLate(a)) by[p][2]++; }
+      if (Object.keys(by).length) main.appendChild(sec("My Room Reset, days done", h("div", { class: "list" }, Object.keys(by).map(p => h("div", { class: "li" }, h("div", { class: "n" }, R.people[p].label), h("div", { class: "s" }, by[p][0] + " of " + by[p][1] + " days" + (by[p][2] ? " · " + by[p][2] + " after 8 pm" : ""))))))); }
     // week log
     const items = [];
     for (const sw of swapsAll()) items.push([sw.date, "Swap " + sw.status + " · " + R.people[sw.from].label + " ↔ " + R.people[sw.to].label + " · " + sw.give.map(i => (A(i) || {}).label).join(" + ") + " for " + sw.take.map(i => (A(i) || {}).label).join(" + ")]);
