@@ -367,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794780600"></script>
-<script src="./engine.js?v=1794780600"></script>
-<script>window.VATRA_BUILD="1794780600";</script>
+<script src="./rules.js?v=1794792600"></script>
+<script src="./engine.js?v=1794792600"></script>
+<script>window.VATRA_BUILD="1794792600";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1000,7 +1000,7 @@
   const isLate = () => isLateAt(LATE_FROM);
   const SHOP_LATE = 16; // Shop goes orange Sunday 4 pm, so there is still time for Costco (Mama, 6 Nov)
   const ROOM_BY = 20, ROOM_BY_FROM = "2026-11-15"; // My Room Reset is due before dinner, 8 pm; after that it still counts but is marked late (Mama, 15 Nov 15:09)
-  const roomBy = (a) => !!a && a.chore === "roomReset" && (a.date || a.due || S.today) >= ROOM_BY_FROM;
+  const roomBy = (a) => false; // the 8 pm limit on My Room Reset is off again (Mama, 15 Nov 20:23: "in practice it doesn't seem to stick"); back to the night's own cutoff
   const lateFor = (a) => a && a.chore === "shop" ? isLateAt(SHOP_LATE) : roomBy(a) ? isLateAt(ROOM_BY) : isLate();
   function lateOpen(a) {
     if (!a || !lateFor(a) || a.optional || a.auto || a.unassigned || a.bathDay || (a.quiet && a.chore !== "roomReset") || (a.own && a.chore !== "roomReset")) return false;
@@ -1746,6 +1746,70 @@
     const owed = Object.keys(GYM_FEE).map(p => { let t = 0; for (let w = GYM_FROM; gymWeekOver(w); w = E.addDays(w, 7)) if (!gymPaid(p, w)) t += gymOwes(p, gymOf(p, w).length); return t ? R.people[p].label + " " + gymMoney(t) : null; }).filter(Boolean);
     return h("div", {}, h("p", { class: "note" }, "Sunday to Saturday. " + GYM_GOAL + " or more visits: Mama pays. " + Object.keys(GYM_FEE).map(p => R.people[p].label + ": " + (GYM_GOAL - 1) + " visits " + gymMoney(GYM_FEE[p] / 8) + ", fewer " + gymMoney(GYM_FEE[p] / 4) + ".").join(" ") + (owed.length ? " Owed from finished weeks: " + owed.join(" · ") + "." : "")), h("div", { class: "list" }, rows));
   }
+  // ---------- Habits (Mama, 15 Nov 19:56-20:23) ----------
+  // Daily chips on Mine, a family grid in the Review. No red, no minutes, no 🔥, no stakes (gym keeps its money rule).
+  // Family habits are set here; `only` = a personal habit (shown to that person alone, not in the Review grid).
+  const HABITS = [
+    { key: "gym", icon: "🏋️", label: "Gym", goal: GYM_GOAL, not: ["Maya"] },
+    { key: "prayer", icon: "🙏", label: "Prayer", hint: "5 minutes or less.", goal: 7 },
+    { key: "read", icon: "📖", label: "Read 1h", hint: "One hour of reading. A podcast can replace it on 2 days a week.", goal: 7, read: true },
+    { key: "social", icon: "📵", label: "Social <30", hint: "Under 30 minutes of social media, as your phone's Screen Time reports it. Tick yesterday once the day's total is in.", goal: 7 },
+    { key: "tidy", icon: "🧹", label: "Digital tidy", hint: "15 minutes: photos, downloads, desktop, inbox.", goal: 7, only: ["Mama"] },
+  ];
+  const POD_MAX = 2;
+  const habitsFor = (p) => HABITS.filter(x => (!x.only || x.only.includes(p)) && !(x.not || []).includes(p));
+  const habOf = (x, p, wk) => x.key === "gym" ? gymOf(p, wk) : S.gym.filter(d => d.kind === "habit" && !d.deleted && d.habit === x.key && d.person === p && weekOfDate(d.date) === wk).sort((a, b) => (a.date < b.date ? -1 : 1));
+  const habId = (x, p, d) => "hab_" + x.key + "_" + p + "_" + d;
+  const habSet = (x, p, d, extra) => store.writeGym(Object.assign({ id: habId(x, p, d), gym: true, kind: "habit", habit: x.key, person: p, date: d, by: S.me, at: new Date().toISOString() }, extra || {}));
+  const podsLeft = (x, p, wk) => POD_MAX - habOf(x, p, wk).filter(d => d.via === "podcast").length;
+  function habitStrip(p) {
+    const wk = monday(), hs = habitsFor(p);
+    const chip = (x) => { const v = habOf(x, p, wk), today = v.find(d => d.date === S.today); let held = false; // a hold opens the sheet; the click that follows the release must not tick the habit
+      const b = h("button", { title: x.label + " · hold for the week", style: "min-height:76px;min-width:0;border-radius:14px;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;" + (today ? "border:1.5px solid var(--green);background:var(--green);color:#fff" : "border:1.5px dashed var(--soft2);background:var(--card);color:var(--ink)"),
+        onclick: () => { if (held) { held = false; return; } if (x.key === "gym") return gymSheet(p); if (x.read) return habitSheet(x, p); if (today) store.deleteGym(today.id); else habSet(x, p, S.today); } },
+        h("span", { style: "font-size:20px;line-height:1" }, x.icon), h("span", { style: "font-size:12px;font-weight:700;line-height:1.15;text-align:center" }, x.label), h("span", { style: "font-size:11px;" + (today ? "" : "color:var(--mute)") }, v.length + " of " + x.goal));
+      if (x.key !== "gym") longPress(b, () => { held = true; setTimeout(() => { held = false; }, 900); habitSheet(x, p); }); return b; };
+    return h("div", { style: "margin-bottom:12px" }, h("div", { class: "label", style: "display:flex;justify-content:space-between" }, h("span", {}, "Habits"), h("span", { style: "font-weight:500;text-transform:none;letter-spacing:0" }, "tap = done today · hold = the week")),
+      h("div", { style: "display:grid;grid-template-columns:repeat(" + hs.length + ",minmax(0,1fr));gap:6px" }, hs.map(chip)));
+  }
+  function habitSheet(x, p, day) {
+    if (x.key === "gym") return gymSheet(p, day);
+    const wk = monday(), days = wkDates(wk).filter(d => d <= S.today), v = habOf(x, p, wk);
+    let sel = day && days.includes(day) ? day : S.today;
+    const can = isMgr() || S.me === p;
+    const inp = h("input", { type: "text", placeholder: x.read ? "optional: what you read or listened to" : "optional note", enterkeyhint: "done", style: "width:100%;font:inherit;font-size:16px;padding:10px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);box-sizing:border-box" });
+    inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
+    const ex = () => v.find(d => d.date === sel);
+    const save = async (extra) => { await habSet(x, p, sel, Object.assign({ note: inp.value.trim() || null }, extra || {})); habitSheet(x, p, sel); };
+    const dayRow = h("div", { class: "pick" }), acts = h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" });
+    const draw = () => {
+      dayRow.innerHTML = ""; for (const d of days) dayRow.appendChild(h("button", { class: d === sel ? "on" : "", onclick: () => { sel = d; draw(); } }, (d === S.today ? "Today" : E.dow(d)) + (v.some(e => e.date === d) ? " ✓" : "")));
+      const e0 = ex(); inp.value = e0 && e0.note ? e0.note : ""; acts.innerHTML = "";
+      if (e0) { acts.appendChild(h("button", { class: "btn", onclick: () => save({ via: e0.via || null }) }, "Save note")); acts.appendChild(h("button", { class: "btn quiet", onclick: async () => { await store.deleteGym(e0.id); habitSheet(x, p, sel); } }, "Undo this day")); }
+      else if (x.read) { const left = podsLeft(x, p, wk); acts.appendChild(h("button", { class: "btn", onclick: () => save({ via: "book" }) }, "📖 A book")); const pb = h("button", { class: "btn quiet", onclick: () => { if (left > 0) save({ via: "podcast" }); } }, "🎧 A podcast · " + Math.max(0, left) + " of " + POD_MAX + " left"); if (left <= 0) pb.setAttribute("disabled", ""); acts.appendChild(pb); }
+      else acts.appendChild(h("button", { class: "btn", onclick: () => save() }, "Done · " + (sel === S.today ? "today" : E.dow(sel))));
+    };
+    draw();
+    sheet(h("h3", {}, x.icon + " " + x.label + " · " + R.people[p].label), h("p", { class: "note" }, v.length + " of " + x.goal + " this week. " + (x.hint || "")),
+      can ? h("div", {}, h("div", { class: "label" }, "Which day"), dayRow) : null,
+      can ? h("div", {}, h("div", { class: "label" }, "Note"), inp) : null, can ? acts : null,
+      h("div", { class: "label" }, "This week"),
+      v.length ? h("div", { class: "list" }, v.map(d => h("div", { class: "li" }, h("div", {}, h("div", { class: "n" }, fmtDay(d.date)), h("div", { class: "s" }, (d.via === "podcast" ? "podcast" : d.via === "book" ? "book" : "done") + (d.note ? " · " + d.note : "")))))) : h("p", { class: "note" }, "Nothing yet. A missed day just stays empty."),
+      (() => { const prev = [1, 2, 3].map(i => E.addDays(wk, -7 * i)).filter(w => w >= GYM_FROM).map(w => [w, habOf(x, p, w)]).filter(([, xs]) => xs.length);
+        return prev.length ? h("div", {}, h("div", { class: "label" }, "Earlier weeks"), h("div", { class: "list" }, prev.map(([w, xs]) => h("div", { class: "li" }, h("div", {}, h("div", { class: "n" }, "Week of " + fmtDay(wkDates(w)[0]).replace(/^\w+, /, "") + " · " + xs.length + " of " + x.goal), h("div", { class: "s" }, xs.map(d => E.dow(d.date) + (d.via === "podcast" ? " 🎧" : "") + (d.note ? " " + d.note : "")).join(" · "))))))) : null; })());
+    S.sheetKeep = true;
+  }
+  function habitGrid(W) {
+    if (W.week < GYM_FROM) return null;
+    const hs = HABITS.filter(x => !x.only), cell = "min-height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font:inherit;font-weight:700;font-size:15px;";
+    const kids = [h("div", {})].concat(R.order.map(p => h("div", { style: "font-weight:700;font-size:12px;text-align:center;overflow:hidden;text-overflow:ellipsis" }, R.people[p].label)));
+    for (const x of hs) { kids.push(h("div", {}, h("div", { style: "font-weight:700;font-size:13px" }, x.icon + " " + x.label), h("div", { class: "s", style: "font-size:11px" }, "goal " + x.goal)));
+      for (const p of R.order) { if ((x.not || []).includes(p)) { kids.push(h("div", { style: cell + "color:var(--mute);font-weight:500" }, "–")); continue; }
+        const n = habOf(x, p, W.week).length, met = n >= x.goal;
+        kids.push(h("button", { style: cell + (met ? "border:1.5px solid var(--green);background:var(--green);color:#fff" : "border:1.5px solid var(--line);background:var(--card);color:var(--ink)"), title: R.people[p].label + " · " + x.label, onclick: () => (W.week === monday() ? habitSheet(x, p) : null) }, String(n))); } }
+    return h("div", {}, h("div", { style: "display:grid;grid-template-columns:minmax(84px,1.5fr) repeat(" + R.order.length + ",minmax(0,1fr));gap:6px;align-items:center" }, kids),
+      h("p", { class: "note" }, "Green = goal met. Tap a number for that person's days. Podcast days count inside Read, " + POD_MAX + " a week at most. Personal habits are not shown here."));
+  }
   const todoErrBanner = () => S.todoErr ? h("div", { class: "banner" }, "To-dos could not be saved: the family database needs one more permission. Tell Claude.") : null;
 
   function askSheet(edit, pre) {
@@ -2294,9 +2358,9 @@
       S._arrivalRow = null; // the top chip is the home button (Mama, 8 Nov 01:09)
     }
     const row = (a) => { if (a._zoneDay) { const li = h("div", { class: "li future" }, h("div", {}, h("div", { class: "n" }, a.label + " · every day"), h("div", { class: "s" }, R.short[a.chore] || ""))); fx(li, a); return li; } const st = state(a); const li = h("div", { class: "li " + (a.kind === "zone" && !a.carried && zoneToday(a) && st !== "overdue" ? "done" : st) }, h("div", {}, h("div", { class: "n" }, a.label + (a.carried ? " · from last week" : a.kind === "zone" ? " · every day" : "")), mealLine(a), h("div", { class: "s" }, a.kind === "zone" && !a.carried ? zoneDaysTxt(a) : (sub(a, st) || (st === "future" ? "later" : ""))), h("div", { class: "s", style: "color:var(--ink)" }, R.short[a.chore] || "")), h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end" }, a.kind === "zone" && !a.carried ? zoneActs(a) : acts(a, st))); fx(li, a); markLate(li, a, true); longPress(li, () => sheetFor(a)); mealMark(li, a); return li; };
+    if (R.people[S.me]) main.appendChild(habitStrip(S.me)); // habits first, as in the approved mockup (Mama, 15 Nov 20:23)
     main.appendChild(h("div", {}, h("div", { class: "label", style: "color:var(--ink)" }, "Today · " + fmtDay(S.today)), h("div", { class: "list" }, ...(() => { const shopRows = (S.me === "Tata" && (shopOpenItems().some(x => isUrg(x)) || W.assignments.some(x => (x.chore === "shop" || x.chore === "costco") && (x.date === S.today || shopFri(x, S.today) || (!x.date && ["Sat", "Sun"].includes(E.dow(S.today)))))) ? [(() => { const open = shopOpenItems(); const li = h("div", { class: "li" + (open.some(x => isUrg(x)) ? " overdue" : "") }, h("div", {}, h("div", { class: "n" }, "🛒 Shopping list"), h("div", { class: "s" }, open.length + " to buy" + (open.some(x => isUrg(x)) ? " · " + open.filter(x => isUrg(x)).length + " urgent" : "") + (open.some(x => x.meal) ? " · " + open.filter(x => x.meal).length + " meal ideas" : ""))), h("button", { class: "btn", onclick: shopSheet }, "Open")); li.addEventListener("click", (e) => { if (e.target.tagName !== "BUTTON") shopSheet(); }); return li; })()] : []); const dr = null, late = false; const openT = todayList.filter(a => rank(a) < 3), doneT = todayList.filter(a => rank(a) >= 3); const rows = openT.map(row).concat(doneT.length ? [foldBox("✓ Done today (" + doneT.length + ")", doneT.map(row), "_doneOpen")] : []); const nLate = todayList.filter(lateOpen).length; // orange jobs above everything, even the 🛒 row (Mama, 5 Nov 22:08)
       return rows.slice(0, nLate).concat(late ? [dr] : [], shopRows, rows.slice(nLate), late || !dr ? [] : [dr]); })())));
-    if (gymPeople().includes(S.me)) main.appendChild(gymRow(S.me));
     { const all = todosOf(S.me), nOpen = all.filter(x => x.status !== "done").length, tl = all.filter(x => !isUrgTodo(x)), eb = todoErrBanner(); if (eb) main.appendChild(eb);
       main.appendChild(h("div", {}, h("div", { class: "label", style: "color:var(--ink)" }, "To-do" + (nOpen ? " · " + nOpen : "")), tl.length ? h("div", { class: "list" }, tl.map(todoRow)) : h("div", { class: "note" }, all.length ? "The rest is clear. Urgent ones are at the top." : "Nothing to remember. ➕ To-do adds one, for you or for someone else."))); }
     if (S._arrivalRow) { main.appendChild(S._arrivalRow); S._arrivalRow = null; }
@@ -2405,11 +2469,12 @@
         rows.push(h("div", { class: "li" }, h("div", {}, h("div", { class: "n" }, lab + ": standard " + s0 + " → " + sug + " min?"), h("div", { class: "s" }, xs.length + " answers, mostly " + (slow >= 3 ? "slower" : "faster") + " · middle answer " + med + " min")),
           S.me === "Mama" ? h("div", { style: "display:flex;gap:6px" }, h("button", { class: "btn sm", onclick: () => store.writeSettings({ std: Object.assign({}, STD, { [c]: sug }), stdKeep: Object.assign({}, KEEP, { [c]: S.today }) }) }, "Change"), h("button", { class: "btn quiet sm", onclick: () => store.writeSettings({ stdKeep: Object.assign({}, KEEP, { [c]: S.today }) }) }, "Keep")) : null)); }
       if (rows.length) main.appendChild(sec("Times to adjust", h("div", { class: "list" }, rows))); }
-    { const g = gymReview(W); if (g) main.appendChild(sec("🏋️ Gym", g)); }
+    { const hg = habitGrid(W); if (hg) main.appendChild(sec("Habits this week", hg)); }
+    { const g = gymReview(W); if (g) main.appendChild(sec("🏋️ Gym money", g)); }
     // My Room Reset, quiet daily tick
     { const resets = W.assignments.filter(a => a.chore === "roomReset" && a.date <= S.today); const by = {};
       for (const a of resets) { const p = effPerson(a); by[p] = by[p] || [0, 0, 0]; by[p][1]++; if (S.done[a.id]) by[p][0]++; if (doneLate(a)) by[p][2]++; }
-      if (Object.keys(by).length) main.appendChild(sec("My Room Reset, days done", h("div", { class: "list" }, Object.keys(by).map(p => h("div", { class: "li" }, h("div", { class: "n" }, R.people[p].label), h("div", { class: "s" }, by[p][0] + " of " + by[p][1] + " days" + (by[p][2] ? " · " + by[p][2] + " after 8 pm" : ""))))))); }
+      if (Object.keys(by).length) main.appendChild(sec("My Room Reset, days done", h("div", { class: "list" }, Object.keys(by).map(p => h("div", { class: "li" }, h("div", { class: "n" }, R.people[p].label), h("div", { class: "s" }, by[p][0] + " of " + by[p][1] + " days" )))))); }
     // week log
     const items = [];
     for (const sw of swapsAll()) items.push([sw.date, "Swap " + sw.status + " · " + R.people[sw.from].label + " ↔ " + R.people[sw.to].label + " · " + sw.give.map(i => (A(i) || {}).label).join(" + ") + " for " + sw.take.map(i => (A(i) || {}).label).join(" + ")]);

@@ -138,7 +138,7 @@ window.VATRA_RULES = {
     filters: "Washer and dishwasher filters.",
     car: "Car inside and out.",
     room: "Bed made, clothes put back, floor and surfaces clear.",
-    roomReset: "Before 8 pm. Bed made, clothes away, floor and surfaces clear, cups to the kitchen.",
+    roomReset: "Bed made, clothes away, floor and surfaces clear, cups to the kitchen.",
     roomDeep: "Vacuum, wipe floor, dust, surfaces, mirror, pillowcases, bin, declutter one surface, air.",
     drawers: "Own drawers and closet declutter.",
     roomDeclutter: "Drawers, closet, shelves, under the bed. One bag out to donate or recycle.",
