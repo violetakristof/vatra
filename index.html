@@ -367,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794793800"></script>
-<script src="./engine.js?v=1794793800"></script>
-<script>window.VATRA_BUILD="1794793800";</script>
+<script src="./rules.js?v=1794794700"></script>
+<script src="./engine.js?v=1794794700"></script>
+<script>window.VATRA_BUILD="1794794700";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1703,6 +1703,9 @@
   const gymMoney = (n) => "$" + n.toFixed(2);
   const gymOf = (p, wk) => S.gym.filter(x => x.kind === "visit" && !x.deleted && x.person === p && weekOfDate(x.date) === wk).sort((a, b) => (a.date < b.date ? -1 : 1));
   const gymOwes = (p, n) => { const f = GYM_FEE[p]; if (!f) return 0; return n >= GYM_GOAL ? 0 : n === GYM_GOAL - 1 ? f / 8 : f / 4; };
+  // banking (Mama, 15 Nov 20:50): a week with more than 4 real visits banks ONE spare visit for the next week only. It counts toward that week's 4. Banked visits don't bank again.
+  const gymBank = (p, wk) => E.addDays(wk, -7) >= GYM_FROM && gymOf(p, E.addDays(wk, -7)).length > GYM_GOAL ? 1 : 0;
+  const gymEff = (p, wk) => gymOf(p, wk).length + gymBank(p, wk);
   const gymPaid = (p, wk) => S.gym.find(x => x.kind === "paid" && !x.deleted && x.person === p && x.week === wk);
   const gymWeekOver = (wk) => wkDates(wk)[6] < S.today;
   const gymTerms = (p) => GYM_FEE[p] ? GYM_GOAL + " or more: Mama pays. " + (GYM_GOAL - 1) + ": " + R.people[p].label + " pays " + gymMoney(GYM_FEE[p] / 8) + ". Fewer: " + gymMoney(GYM_FEE[p] / 4) + "." : "";
@@ -1723,9 +1726,9 @@
     const dayRow = h("div", { class: "pick" });
     const draw = () => { dayRow.innerHTML = ""; for (const d of days) dayRow.appendChild(h("button", { class: d === sel ? "on" : "", onclick: () => { sel = d; draw(); } }, (d === S.today ? "Today" : E.dow(d)) + (v.some(x => x.date === d) ? " ✓" : ""))); const e0 = ex(); inp.value = e0 && e0.note ? e0.note : ""; saveBtn.textContent = e0 ? "Save note" : "I went · log it"; };
     draw();
-    const owe = gymOwes(p, v.length);
+    const bank = gymBank(p, wk), owe = gymOwes(p, v.length + bank);
     sheet(h("h3", {}, "🏋️ Gym · " + R.people[p].label),
-      h("p", { class: "note" }, v.length + " of " + GYM_GOAL + " this week." + (GYM_FEE[p] ? " " + gymTerms(p) + (owe ? " So far this week: " + gymMoney(owe) + "." : " This week is covered.") : "")),
+      h("p", { class: "note" }, v.length + " of " + GYM_GOAL + " this week." + (bank ? " Plus 1 banked from last week." : "") + (v.length > GYM_GOAL ? " 1 visit banked for next week." : "") + (GYM_FEE[p] ? " " + gymTerms(p) + (owe ? " So far this week: " + gymMoney(owe) + "." : " This week is covered.") : "")),
       can ? h("div", {}, h("div", { class: "label" }, "Which day"), dayRow) : null,
       can ? h("div", {}, h("div", { class: "label" }, "What you did"), inp) : null,
       can ? saveBtn : null,
@@ -1739,12 +1742,12 @@
   function gymReview(W) {
     if (W.week < GYM_FROM) return null;
     const over = gymWeekOver(W.week);
-    const rows = gymPeople().map(p => { const v = gymOf(p, W.week), n = v.length, fee = GYM_FEE[p], owe = gymOwes(p, n), pd = gymPaid(p, W.week);
-      return h("div", { class: "li" + (n >= GYM_GOAL ? " done" : "") }, h("div", {}, h("div", { class: "n" }, R.people[p].label + " · " + n + " of " + GYM_GOAL), h("div", { class: "s" }, v.map(x => E.dow(x.date) + (x.note ? " " + x.note : "")).join(" · ") || "no visits"),
+    const rows = gymPeople().map(p => { const v = gymOf(p, W.week), n = v.length, bank = gymBank(p, W.week), fee = GYM_FEE[p], owe = gymOwes(p, n + bank), pd = gymPaid(p, W.week);
+      return h("div", { class: "li" + (n + bank >= GYM_GOAL ? " done" : "") }, h("div", {}, h("div", { class: "n" }, R.people[p].label + " · " + n + " of " + GYM_GOAL + (bank ? " · +1 banked from last week" : "") + (n > GYM_GOAL ? " · banks 1 for next week" : "")), h("div", { class: "s" }, v.map(x => E.dow(x.date) + (x.note ? " " + x.note : "")).join(" · ") || "no visits"),
           fee ? h("div", { class: "s", style: "color:var(--ink)" }, owe ? (over ? R.people[p].label + " pays " : "so far: ") + gymMoney(owe) + (pd ? " · paid" : "") : "Mama pays this week") : null),
         fee && owe && over && isMgr() ? (pd ? h("button", { class: "btn quiet sm", onclick: () => store.deleteGym(pd.id) }, "Undo") : h("button", { class: "btn sm", onclick: () => store.writeGym({ id: "gympaid_" + p + "_" + W.week, gym: true, kind: "paid", person: p, week: W.week, by: S.me, at: new Date().toISOString() }) }, "Paid")) : null); });
-    const owed = Object.keys(GYM_FEE).map(p => { let t = 0; for (let w = GYM_FROM; gymWeekOver(w); w = E.addDays(w, 7)) if (!gymPaid(p, w)) t += gymOwes(p, gymOf(p, w).length); return t ? R.people[p].label + " " + gymMoney(t) : null; }).filter(Boolean);
-    return h("div", {}, h("p", { class: "note" }, "Sunday to Saturday. " + GYM_GOAL + " or more visits: Mama pays. " + Object.keys(GYM_FEE).map(p => R.people[p].label + ": " + (GYM_GOAL - 1) + " visits " + gymMoney(GYM_FEE[p] / 8) + ", fewer " + gymMoney(GYM_FEE[p] / 4) + ".").join(" ") + (owed.length ? " Owed from finished weeks: " + owed.join(" · ") + "." : "")), h("div", { class: "list" }, rows));
+    const owed = Object.keys(GYM_FEE).map(p => { let t = 0; for (let w = GYM_FROM; gymWeekOver(w); w = E.addDays(w, 7)) if (!gymPaid(p, w)) t += gymOwes(p, gymEff(p, w)); return t ? R.people[p].label + " " + gymMoney(t) : null; }).filter(Boolean);
+    return h("div", {}, h("p", { class: "note" }, "Sunday to Saturday. " + GYM_GOAL + " or more visits: Mama pays. More than " + GYM_GOAL + ": one spare visit is banked for the next week. " + Object.keys(GYM_FEE).map(p => R.people[p].label + ": " + (GYM_GOAL - 1) + " visits " + gymMoney(GYM_FEE[p] / 8) + ", fewer " + gymMoney(GYM_FEE[p] / 4) + ".").join(" ") + (owed.length ? " Owed from finished weeks: " + owed.join(" · ") + "." : "")), h("div", { class: "list" }, rows));
   }
   // ---------- Habits (Mama, 15 Nov 19:56-20:23) ----------
   // Daily chips on Mine, a family grid in the Review. No red, no minutes, no 🔥, no stakes (gym keeps its money rule).
@@ -1786,7 +1789,7 @@
     const chip = (x) => { const v = habOf(x, p, wk), today = v.find(d => d.date === S.today); let held = false; // a hold opens the sheet; the click that follows the release must not tick the habit
       const b = h("button", { title: x.label + " · hold for the week", style: "min-height:76px;min-width:0;border-radius:14px;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;" + (today ? "border:1.5px solid var(--green);background:var(--green);color:#fff" : "border:1.5px dashed var(--soft2);background:var(--card);color:var(--ink)"),
         onclick: () => { if (held) { held = false; return; } if (x.key === "gym") return gymSheet(p); if (x.read) return habitSheet(x, p); if (today) store.deleteGym(today.id); else habSet(x, p, S.today); } },
-        h("span", { style: "font-size:20px;line-height:1" }, x.icon), h("span", { style: "font-size:12px;font-weight:700;line-height:1.15;text-align:center" }, x.label), h("span", { style: "font-size:11px;" + (today ? "" : "color:var(--mute)") }, v.length + " of " + x.goal));
+        h("span", { style: "font-size:20px;line-height:1" }, x.icon), h("span", { style: "font-size:12px;font-weight:700;line-height:1.15;text-align:center" }, x.label), h("span", { style: "font-size:11px;" + (today ? "" : "color:var(--mute)") }, v.length + " of " + x.goal + (x.key === "gym" && gymBank(p, wk) ? " +1" : "")));
       if (x.key !== "gym") longPress(b, () => { held = true; setTimeout(() => { held = false; }, 900); habitSheet(x, p); }); return b; };
     return h("div", { style: "margin-bottom:12px" }, h("div", { class: "label", style: "display:flex;justify-content:space-between" }, h("span", {}, "Habits"), h("span", { style: "font-weight:500;text-transform:none;letter-spacing:0" }, "tap = done today · hold = the week")),
       (() => { const kids = hs.map(chip); if (S.me === p && personalCount(p) < PERSONAL_MAX) kids.push(h("button", { title: "Add a habit of your own", style: "min-height:76px;min-width:0;border-radius:14px;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;border:1.5px dotted var(--soft2);background:transparent;color:var(--mute)", onclick: () => addHabitSheet(p) }, h("span", { style: "font-size:22px;line-height:1" }, "＋"), h("span", { style: "font-size:12px;font-weight:700" }, "My own")));
@@ -1826,8 +1829,8 @@
     const kids = [h("div", {})].concat(R.order.map(p => h("div", { style: "font-weight:700;font-size:12px;text-align:center;overflow:hidden;text-overflow:ellipsis" }, R.people[p].label)));
     for (const x of hs) { kids.push(h("div", {}, h("div", { style: "font-weight:700;font-size:13px" }, x.icon + " " + x.label), h("div", { class: "s", style: "font-size:11px" }, "goal " + x.goal)));
       for (const p of R.order) { if ((x.not || []).includes(p)) { kids.push(h("div", { style: cell + "color:var(--mute);font-weight:500" }, "–")); continue; }
-        const n = habOf(x, p, W.week).length, met = n >= x.goal;
-        kids.push(h("button", { style: cell + (met ? "border:1.5px solid var(--green);background:var(--green);color:#fff" : "border:1.5px solid var(--line);background:var(--card);color:var(--ink)"), title: R.people[p].label + " · " + x.label, onclick: () => (W.week === monday() ? habitSheet(x, p) : null) }, String(n))); } }
+        const n = habOf(x, p, W.week).length, bk = x.key === "gym" ? gymBank(p, W.week) : 0, met = n + bk >= x.goal;
+        kids.push(h("button", { style: cell + (met ? "border:1.5px solid var(--green);background:var(--green);color:#fff" : "border:1.5px solid var(--line);background:var(--card);color:var(--ink)"), title: R.people[p].label + " · " + x.label, onclick: () => (W.week === monday() ? habitSheet(x, p) : null) }, String(n) + (bk ? "+1" : ""))); } }
     return h("div", {}, h("div", { style: "display:grid;grid-template-columns:minmax(84px,1.5fr) repeat(" + R.order.length + ",minmax(0,1fr));gap:6px;align-items:center" }, kids),
       h("p", { class: "note" }, "Green = goal met. Tap a number for that person's days. Podcast days count inside Read, " + POD_MAX + " a week at most. Personal habits are not shown here."));
   }
@@ -2262,7 +2265,7 @@
     if (doneChips.children.length) main.appendChild(foldBox("✓ Done today (" + doneChips.children.length + ")", [doneChips], "_boardDoneOpen"));
     { const eb = todoErrBanner(); if (eb) main.appendChild(eb);
       main.appendChild(sec("To-do · so we don't forget", h("div", { class: "btodo" }, R.order.map(p => { const tl = todosOf(p); return h("div", { class: "col", style: "border-top-color:" + PCOL[p] }, h("div", { class: "pn" }, pdot(p), plabel(p), tl.some(isUrgTodo) ? h("span", { style: "margin-left:auto;color:var(--red);font-size:14px" }, "🔴 " + tl.filter(isUrgTodo).length) : null), tl.length ? tl.map(todoRow) : h("div", { class: "note", style: "padding:0 2px" }, "—")); })))); }
-    main.appendChild(sec("🏋️ Gym this week · tap your name to log", h("div", { class: "pick" }, gymPeople().map(p => { const n = gymOf(p, monday()).length; return h("button", { class: n >= GYM_GOAL ? "on" : "", onclick: () => gymSheet(p) }, R.people[p].label + " " + n + "/" + GYM_GOAL); }))));
+    main.appendChild(sec("🏋️ Gym this week · tap your name to log", h("div", { class: "pick" }, gymPeople().map(p => { const n = gymEff(p, monday()); return h("button", { class: n >= GYM_GOAL ? "on" : "", onclick: () => gymSheet(p) }, R.people[p].label + " " + n + "/" + GYM_GOAL); }))));
     main.appendChild(h("div", { class: "note", style: "text-align:right;font-size:11px" }, "Kitchen board · hold the 👤 pill to change this device"));
     const od = overdueList();
     if (od.length) main.appendChild(h("div", { class: "redrow", style: "background:var(--red);color:#fff;border-radius:12px;padding:10px 14px;gap:16px;flex-wrap:wrap;font-size:14px" }, od.map(o => h("span", {}, h("b", {}, R.people[o.person].label), " · " + o.what))));
