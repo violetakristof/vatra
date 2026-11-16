@@ -367,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794792600"></script>
-<script src="./engine.js?v=1794792600"></script>
-<script>window.VATRA_BUILD="1794792600";</script>
+<script src="./rules.js?v=1794793800"></script>
+<script src="./engine.js?v=1794793800"></script>
+<script>window.VATRA_BUILD="1794793800";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1757,7 +1757,26 @@
     { key: "tidy", icon: "🧹", label: "Digital tidy", hint: "15 minutes: photos, downloads, desktop, inbox.", goal: 7, only: ["Mama"] },
   ];
   const POD_MAX = 2;
-  const habitsFor = (p) => HABITS.filter(x => (!x.only || x.only.includes(p)) && !(x.not || []).includes(p));
+  // personal habits: anyone adds their own with the ＋ chip (Mama, 15 Nov 20:39). Only that person sees them, they are not in the Review grid, at most PERSONAL_MAX each.
+  const PERSONAL_MAX = 2, HAB_ICONS = ["⭐", "🧘", "💧", "🎹", "🗣️", "✍️", "🚶", "😴", "🥗", "📚"];
+  const habDefs = (p) => S.gym.filter(d => d.kind === "habitdef" && !d.deleted && d.person === p).sort((a, b) => (a.at < b.at ? -1 : 1)).map(d => ({ key: d.id, defId: d.id, icon: d.icon || "⭐", label: d.label, goal: d.goal || 7, personal: true }));
+  const habitsFor = (p) => HABITS.filter(x => (!x.only || x.only.includes(p)) && !(x.not || []).includes(p)).concat(habDefs(p));
+  const personalCount = (p) => HABITS.filter(x => x.only && x.only.includes(p)).length + habDefs(p).length;
+  function addHabitSheet(p) {
+    const st = { goal: 7, icon: HAB_ICONS[0] };
+    const inp = h("input", { type: "text", placeholder: "e.g. Stretch, Duolingo, Piano", maxlength: "18", enterkeyhint: "done", style: "width:100%;font:inherit;font-size:16px;padding:10px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);box-sizing:border-box" });
+    inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
+    const msg = h("div", { class: "note", style: "color:var(--red)" });
+    const row = (key, opts) => { const box = h("div", { class: "pick" }); const draw = () => { box.innerHTML = ""; for (const [v, l] of opts) box.appendChild(h("button", { class: st[key] === v ? "on" : "", onclick: () => { st[key] = v; draw(); } }, l)); }; draw(); return box; };
+    const add = async () => { const label = inp.value.trim(); if (!label) { msg.textContent = "Give it a name."; return; } if (personalCount(p) >= PERSONAL_MAX) { msg.textContent = "You already have " + PERSONAL_MAX + " of your own. Remove one first."; return; }
+      await store.writeGym({ id: "habdef_" + p + "_" + Date.now(), gym: true, kind: "habitdef", person: p, label, goal: st.goal, icon: st.icon, by: S.me, at: new Date().toISOString() }); closeSheet(); };
+    sheet(h("h3", {}, "＋ My own habit"), h("p", { class: "note" }, "Only you see it. It is not in the Review, and nothing depends on it. You can have " + PERSONAL_MAX + " of your own."),
+      h("div", {}, h("div", { class: "label" }, "Name"), inp),
+      h("div", {}, h("div", { class: "label" }, "How many days a week"), row("goal", [1, 2, 3, 4, 5, 6, 7].map(n => [n, String(n)]))),
+      h("div", {}, h("div", { class: "label" }, "Icon"), row("icon", HAB_ICONS.map(i => [i, i]))),
+      msg, h("div", { class: "sticky" }, h("button", { class: "btn", onclick: add }, "Add habit")));
+    S.sheetKeep = true;
+  }
   const habOf = (x, p, wk) => x.key === "gym" ? gymOf(p, wk) : S.gym.filter(d => d.kind === "habit" && !d.deleted && d.habit === x.key && d.person === p && weekOfDate(d.date) === wk).sort((a, b) => (a.date < b.date ? -1 : 1));
   const habId = (x, p, d) => "hab_" + x.key + "_" + p + "_" + d;
   const habSet = (x, p, d, extra) => store.writeGym(Object.assign({ id: habId(x, p, d), gym: true, kind: "habit", habit: x.key, person: p, date: d, by: S.me, at: new Date().toISOString() }, extra || {}));
@@ -1770,7 +1789,8 @@
         h("span", { style: "font-size:20px;line-height:1" }, x.icon), h("span", { style: "font-size:12px;font-weight:700;line-height:1.15;text-align:center" }, x.label), h("span", { style: "font-size:11px;" + (today ? "" : "color:var(--mute)") }, v.length + " of " + x.goal));
       if (x.key !== "gym") longPress(b, () => { held = true; setTimeout(() => { held = false; }, 900); habitSheet(x, p); }); return b; };
     return h("div", { style: "margin-bottom:12px" }, h("div", { class: "label", style: "display:flex;justify-content:space-between" }, h("span", {}, "Habits"), h("span", { style: "font-weight:500;text-transform:none;letter-spacing:0" }, "tap = done today · hold = the week")),
-      h("div", { style: "display:grid;grid-template-columns:repeat(" + hs.length + ",minmax(0,1fr));gap:6px" }, hs.map(chip)));
+      (() => { const kids = hs.map(chip); if (S.me === p && personalCount(p) < PERSONAL_MAX) kids.push(h("button", { title: "Add a habit of your own", style: "min-height:76px;min-width:0;border-radius:14px;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;border:1.5px dotted var(--soft2);background:transparent;color:var(--mute)", onclick: () => addHabitSheet(p) }, h("span", { style: "font-size:22px;line-height:1" }, "＋"), h("span", { style: "font-size:12px;font-weight:700" }, "My own")));
+        return h("div", { style: "display:grid;grid-template-columns:repeat(" + Math.min(kids.length, 5) + ",minmax(0,1fr));gap:6px" }, kids); })());
   }
   function habitSheet(x, p, day) {
     if (x.key === "gym") return gymSheet(p, day);
@@ -1797,6 +1817,7 @@
       v.length ? h("div", { class: "list" }, v.map(d => h("div", { class: "li" }, h("div", {}, h("div", { class: "n" }, fmtDay(d.date)), h("div", { class: "s" }, (d.via === "podcast" ? "podcast" : d.via === "book" ? "book" : "done") + (d.note ? " · " + d.note : "")))))) : h("p", { class: "note" }, "Nothing yet. A missed day just stays empty."),
       (() => { const prev = [1, 2, 3].map(i => E.addDays(wk, -7 * i)).filter(w => w >= GYM_FROM).map(w => [w, habOf(x, p, w)]).filter(([, xs]) => xs.length);
         return prev.length ? h("div", {}, h("div", { class: "label" }, "Earlier weeks"), h("div", { class: "list" }, prev.map(([w, xs]) => h("div", { class: "li" }, h("div", {}, h("div", { class: "n" }, "Week of " + fmtDay(wkDates(w)[0]).replace(/^\w+, /, "") + " · " + xs.length + " of " + x.goal), h("div", { class: "s" }, xs.map(d => E.dow(d.date) + (d.via === "podcast" ? " 🎧" : "") + (d.note ? " " + d.note : "")).join(" · "))))))) : null; })());
+    if (x.personal && can) { let armed = false; const rb = h("button", { class: "btn quiet", style: "color:var(--red);border-color:var(--red);margin-top:10px", onclick: async () => { if (!armed) { armed = true; rb.textContent = "Tap again to remove it for good"; return; } await store.deleteGym(x.defId); closeSheet(); } }, "✕ Remove this habit"); $("#sheet").appendChild(rb); }
     S.sheetKeep = true;
   }
   function habitGrid(W) {
