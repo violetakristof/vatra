@@ -367,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794803330"></script>
-<script src="./engine.js?v=1794803330"></script>
-<script>window.VATRA_BUILD="1794803330";</script>
+<script src="./rules.js?v=1794858695"></script>
+<script src="./engine.js?v=1794858695"></script>
+<script>window.VATRA_BUILD="1794858695";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -474,7 +474,7 @@
     // 🏋️ gym visits and "paid" marks are stored in the todos collection (the database already allows it), marked gym: true
     async writeGym(x) { delete S.gone[x.id]; S.gym = S.gym.filter(y => y.id !== x.id).concat([x]); render(); try { if (S.db) await S.db.doc("todos/" + docId(x.id)).set(x); else { const l = local.get("todos") || {}; l[x.id] = x; local.set("todos", l); } } catch (e) { S.todoErr = true; render(); } },
     async deleteGym(id) { S.gym = S.gym.filter(y => y.id !== id); S.gone[id] = Date.now(); render(); try { if (S.db) await delDoc("todos/" + docId(id), { id }); else { const l = local.get("todos") || {}; delete l[id]; local.set("todos", l); } } catch (e) { S.todoErr = true; render(); } },
-    async deleteTodo(id) { S.todos = S.todos.filter(y => y.id !== id); S.gone[id] = Date.now(); render(); try { if (S.db) await delDoc("todos/" + docId(id), { id }); else { const l = local.get("todos") || {}; delete l[id]; local.set("todos", l); } } catch (e) { S.todoErr = true; render(); } },
+    async deleteTodo(id) { if (S.pomo[id]) { delete S.pomo[id]; localStorage.setItem("vatra.pomo", JSON.stringify(S.pomo)); } S.todos = S.todos.filter(y => y.id !== id); S.gone[id] = Date.now(); render(); try { if (S.db) await delDoc("todos/" + docId(id), { id }); else { const l = local.get("todos") || {}; delete l[id]; local.set("todos", l); } } catch (e) { S.todoErr = true; render(); } },
     async writeSettings(patch) { S.settings = Object.assign({}, S.settings, patch); if (S.db) await S.db.doc("settings/main").set(S.settings); else local.set("settings", S.settings); render(); },
     async log(entry) { entry.at = new Date().toISOString(); entry.week = monday(); if (S.db) await S.db.collection("log").add(entry); else { const l = local.get("log") || []; l.push(entry); local.set("log", l); } },
   };
@@ -742,14 +742,15 @@
     let measured = null;
     let check = false; const plan = Math.max(1, Math.round((a.minutes || 35) / 7));
     if (started) { measured = Math.max(1, Math.round((Date.now() - started) / 60000)); if (measured > 2 * plan) { check = true; measured = plan; } delete S.running[k]; localStorage.setItem("vatra.running", JSON.stringify(S.running)); }
-    await store.writeDone(k, { id: k, daily: true, zone: a.id, chore: a.chore, person: effPerson(a), minutes: 0, counts: false, measured, check, bucket: plan, date: S.today, week: a.week, at: new Date().toISOString() });
+    const focus = pomoTake(k);
+    await store.writeDone(k, { id: k, daily: true, zone: a.id, chore: a.chore, person: effPerson(a), minutes: 0, counts: false, measured, check, focus, bucket: plan, date: S.today, week: a.week, at: new Date().toISOString() });
   }
   function zoneActs(a) {
     const out = [], k = dayId(a), st = state(a);
     if (st === "done") return [h("button", { class: "btn quiet sm", onclick: () => undo(a) }, "Undo week")];
     if (S.done[k + ":skip"]) return isMgr() ? [h("span", { class: "note" }, "today cancelled"), h("button", { class: "btn quiet sm", onclick: () => unskipTile(a) }, "Restore")] : [h("span", { class: "note" }, "today cancelled")];
     if (zoneToday(a)) out.push(h("span", { class: "note" }, S.done[k] && S.done[k].covered && S.done[k].person !== effPerson(a) ? "today 🛟 covered by " + ((R.people[S.done[k].person] || {}).label || "") : "today ✓"), h("button", { class: "btn quiet sm", onclick: () => store.deleteDone(k) }, "Undo"));
-    else out.push(h("button", { class: "btn", onclick: () => finishDay(a) }, "Done"));
+    else { if (S.pomo[k]) out.push(pomoEl(pomoOf(a))); out.push(h("button", { class: "btn", onclick: () => finishDay(a) }, "Done")); }
     // "Week done" removed: zones earn 10 min per day ticked (Mama, 7 Nov 21:55)
     if (isMgr() && !zoneToday(a)) out.push(h("button", { class: "btn quiet sm xbtn", title: "Cancel for today", onclick: () => skipTile(a) }, "✕"));
     return out;
@@ -1580,16 +1581,20 @@
   const todoKey = (x) => (x.status === "done" ? "3" : x.urgent ? "0" : x.date ? "1" + x.date + (x.time || "99:99") : "2") + (x.at || "");
   const isUrgTodo = (x) => !!x.urgent && x.status !== "done";
   const todosOf = (p) => S.todos.filter(x => x.to === p && (x.status !== "done" || x.doneDate === S.today)).sort((a, b) => (todoKey(a) < todoKey(b) ? -1 : 1));
-  const todoToggle = (x) => store.writeTodo(x.status === "done" ? Object.assign({}, x, { status: "open", doneAt: null, doneDate: null, doneBy: null }) : Object.assign({}, x, { status: "done", doneAt: new Date().toISOString(), doneDate: S.today, doneBy: isBoard() ? x.to : S.me }));
+  const todoToggle = (x) => store.writeTodo(x.status === "done" ? Object.assign({}, x, { status: "open", doneAt: null, doneDate: null, doneBy: null, focus: null }) : Object.assign({}, x, { status: "done", doneAt: new Date().toISOString(), doneDate: S.today, doneBy: isBoard() ? x.to : S.me, focus: pomoTake(x.id) }));
   function todoRow(x) {
     const done = x.status === "done";
     const by = x.from && x.from !== x.to ? x.from : null, wh = todoWhen(x);
     const row = h("div", { class: "li shoprow todorow" + (done ? " done" : "") + (isUrgTodo(x) ? " urgent" : ""), style: "border-left-color:" + (PCOL[x.to] || "var(--line)"), role: "checkbox", "aria-checked": done ? "true" : "false" },
       h("div", { class: "chk" + (done ? " on" : "") }, done ? "✓" : ""),
-      h("div", { class: "stxt" }, (isUrgTodo(x) ? "🔴 " : "") + x.text, by || wh ? h("span", { class: "swho" }, by ? [pdot(by), "from " + plabel(by)] : null, by && wh ? " · " : null, wh || null) : null),
+      h("div", { class: "stxt" }, (isUrgTodo(x) ? "🔴 " : "") + x.text, by || wh ? h("span", { class: "swho" }, by ? [pdot(by), "from " + plabel(by)] : null, by && wh ? " · " : null, wh || null) : null,
+        done && x.focus ? h("span", { class: "swho" }, x.focus + " min 🍅") : null,
+        !done && S.pomo[x.id] ? h("div", { style: "margin-top:6px" }, pomoEl(todoPomo(x))) : null),
       isBoard() ? null : h("button", { class: "more", title: "Edit, calendar or delete", onclick: (e) => { e.stopPropagation(); todoMenu(x); } }, "⋯"));
     // phones: tap the row to cross it off, ⋯ for the rest. Board (narrow columns): tap the circle to cross off, tap the words for the rest.
-    row.addEventListener("click", (e) => { if (e.target.closest("button,input,select,a")) return; if (isBoard() && !e.target.closest(".chk")) todoMenu(x); else todoToggle(x); });
+    let held = false; // a hold opens the sheet (🍅 Focus is there); the click that follows the release must not cross it off
+    row.addEventListener("click", (e) => { if (held) { held = false; return; } if (e.target.closest("button,input,select,a")) return; if (isBoard() && !e.target.closest(".chk")) todoMenu(x); else todoToggle(x); });
+    longPress(row, () => { held = true; setTimeout(() => { held = false; }, 900); todoMenu(x); });
     return row;
   }
   // Google Calendar link, prefilled: 1 hour, Montréal time; the person it is for is the guest (unless it is this phone's owner)
@@ -1622,7 +1627,8 @@
   function todoMenu(x) {
     const canDel = isBoard() || isMgr() || x.from === S.me || x.to === S.me;
     sheet(h("h3", {}, x.text), h("p", { class: "note" }, [plabel(x.to) + "'s list", x.from && x.from !== x.to ? "from " + plabel(x.from) : null, todoWhen(x)].filter(Boolean).join(" · ")),
-      h("button", { class: "btn", onclick: () => todoSheet(x) }, "✏️ Edit"),
+      x.status === "done" ? null : h("div", { class: "pick" }, pomoEl(todoPomo(x)), h("button", { class: "btn", onclick: () => { closeSheet(); todoToggle(x); } }, "Done")),
+      h("button", { class: "btn" + (x.status === "done" ? "" : " ghost"), onclick: () => todoSheet(x) }, "✏️ Edit"),
       x.status === "done" ? null : h("button", { class: "btn quiet", onclick: () => { closeSheet(); store.writeTodo(Object.assign({}, x, { urgent: !x.urgent })); } }, x.urgent ? "Not urgent any more" : "🔴 Mark urgent"),
       x.date && x.time ? calBox(x) : null,
       canDel ? h("button", { class: "btn quiet", style: "color:var(--red);border-color:var(--red)", onclick: () => { closeSheet(); store.deleteTodo(x.id); } }, "✕ Delete") : null);
@@ -2073,7 +2079,11 @@
   const POMO = 15 * 60000;
   const savePomo = () => localStorage.setItem("vatra.pomo", JSON.stringify(S.pomo));
   const pomoPlan = (a) => Math.max(1, Math.round((a.minutes || 0) / 15));
-  const hasPomoBase = (a) => (a.minutes || 0) >= 15 && !a.auto && a.kind !== "arrival" && a.kind !== "streak";
+  // every job has a 🍅 in its long-press sheet, short ones too (Mama, 16 Nov 14:47: "pomodoros on each task upon long press"); zones time one day, to-dos too
+  const hasPomoBase = (a) => !a.auto && !a.unassigned && a.kind !== "arrival" && a.kind !== "streak";
+  const pomoOf = (a) => a.kind === "zone" && !a.carried ? { id: dayId(a), minutes: 10 } : a; // a zone's 🍅 is for today's tick
+  const todoPomo = (x) => ({ id: x.id, minutes: 15 });
+  function pomoTake(id) { const pm = S.pomo[id]; if (!pm) return null; const ms = pomoMs(pm); delete S.pomo[id]; savePomo(); return ms >= 60000 ? Math.min(240, Math.round(ms / 60000)) : null; }
   function pomoMs(p) { return p ? (p.acc || 0) + (p.since ? Date.now() - p.since : 0) : 0; }
   function pomoToggle(a) { const p = S.pomo[a.id]; if (!p) S.pomo[a.id] = { acc: 0, since: Date.now(), plan: pomoPlan(a), seen: 0 }; else if (p.since) { p.acc += Date.now() - p.since; p.since = null; } else p.since = Date.now(); savePomo(); render(); }
   function pomoText(id, plan) {
@@ -2147,17 +2157,17 @@
   }
   function acts(a, st, full) {
     if (pastLocked(a)) return st === "done" || st === "cancelled" ? [] : [h("span", { class: "note" }, "🔒 closed at 6 am")];
-    const hasPomo = (x) => hasPomoBase(x) && (full || !!S.pomo[x.id]); // 🍅 only in the long-press sheet (full) or while running (Mama, 10 Nov 15:45)
+    const hasPomo = (x) => hasPomoBase(x) && (full || !!S.pomo[pomoOf(x).id]) && !(x.kind === "zone" && !x.carried && zoneToday(x)); // 🍅 only in the long-press sheet (full) or while running (Mama, 10 Nov 15:45)
     const out = [];
     if (st === "cancelled") { const sk = S.done[skipId(a)]; if (isMgr() || (sk && sk.defer && sk.person === S.me)) out.push(h("button", { class: "btn quiet sm", onclick: () => unskipTile(a) }, sk && sk.defer ? "Undo skip" : "Restore")); return out; }
     { const lb = linenSkipBtn(a, st); if (lb) out.push(lb); }
     const mineOrBoard = true; // the board is shared; anyone taps for anyone
     if (st === "pending" || st === "overdue") {
-      if (hasPomo(a)) out.push(pomoEl(a));
+      if (hasPomo(a)) out.push(pomoEl(pomoOf(a)));
       out.push(h("button", { class: "btn", onclick: () => finish(a) }, "Done"));
       if (a.optional) out.push(h("button", { class: "btn quiet", onclick: () => pass(a) }, "Pass"));
     }
-    if (st === "future" && !a.date && a.window === "wknd" && !a.auto) { if (hasPomo(a)) out.push(pomoEl(a)); out.push(h("button", { class: "btn ghost sm", onclick: () => finish(a) }, "Done")); }
+    if (st === "future" && !a.date && a.window === "wknd" && !a.auto) { if (hasPomo(a)) out.push(pomoEl(pomoOf(a))); out.push(h("button", { class: "btn ghost sm", onclick: () => finish(a) }, "Done")); }
     if (st === "done") { out.push(h("button", { class: "btn quiet sm", onclick: () => undo(a) }, "Undo")); }
     if (st === "passed") out.push(h("button", { class: "btn quiet sm", onclick: () => store.deleteDone(a.id + ":pass") }, "Unpass"));
     { const cx = cancelBtn(a, st); if (cx) out.push(cx); }
@@ -2628,7 +2638,9 @@
     { const zoneDone = a.kind === "zone" && !a.carried && S.done[dayId(a)]; if (st !== "done" && st !== "cancelled" && !zoneDone && !skipped(a)) { const cb = coverBtn(a, true); if (cb) kids.push(cb, h("p", { class: "note" }, "Covered = you did it because it had to be done. The minutes go to you; for " + ((R.people[effPerson(a)] || {}).label || "them") + " it counts as not done tonight.")); } }
     if (st !== "cancelled" && !skipped(a)) { const hb = helpBtn(a); if (hb) kids.push(hb, h("p", { class: "note" }, "Helped = they offered. " + ((R.people[effPerson(a)] || {}).label || "The owner") + " keeps the job and the credit; the helper gets a thank-you and a line in the review.")); }
     if (!isBoard() && effPerson(a) === S.me && swapOpen(a) && R.pool.includes(S.me)) kids.push(h("button", { class: "btn ghost", onclick: () => swapSheet(a) }, "Ask someone to swap"));
-    if (!a.auto && !a.unassigned) kids.push(h("div", { class: "pick" }, acts(a, st, true)));
+    // a zone's sheet ticks today, like its tile (before 16 Nov its Done here closed the whole week)
+    if (a.kind === "zone" && !a.carried && !a.unassigned) kids.push(h("div", { class: "pick" }, pastLocked(a) ? acts(a, st, true) : [st !== "done" && !zoneToday(a) && !S.pomo[dayId(a)] ? pomoEl(pomoOf(a)) : null].concat(zoneActs(a)).filter(Boolean)));
+    else if (!a.auto && !a.unassigned) kids.push(h("div", { class: "pick" }, acts(a, st, true)));
     if (st === "done") { const d = S.done[a.id] || {}; kids.push(h("p", { class: "note" }, "Counts ~" + (d.minutes || a.minutes) + " min (standard)" + (d.focus ? " · 🍅 " + d.focus + " min" : "") + (d.real ? " · took ~" + d.real + " min" : "")));
       if (!d.pace && a.minutes >= 10 && !a.auto && (effPerson(a) === S.me || S.me === "Mama" || isBoard())) kids.push(h("div", { class: "pick" }, h("button", { onclick: () => paceSheet(a, "faster") }, "Faster"), h("button", { onclick: async () => { await store.writeDone(a.id, Object.assign({}, d, { pace: "ok", real: a.minutes })); closeSheet(); } }, "About right"), h("button", { onclick: () => paceSheet(a, "slower") }, "Slower"))); }
     if (a.load != null && a.chore !== "putaway" && st !== "done") {
