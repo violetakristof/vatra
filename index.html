@@ -367,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1795047582"></script>
-<script src="./engine.js?v=1795047582"></script>
-<script>window.VATRA_BUILD="1795047582";</script>
+<script src="./rules.js?v=1795047872"></script>
+<script src="./engine.js?v=1795047872"></script>
+<script>window.VATRA_BUILD="1795047872";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -2520,7 +2520,7 @@
     for (const o of Object.values(S.done).filter(d => d && d.pass && d.week === W.week)) items.push([o.date, "Passed · " + (o.chore === "grandparents" ? "Grandparents" : "Sous-chef") + " · " + R.people[o.person].label]);
     for (const m of messList(W.week)) items.push([m.date, "Bathroom mess · " + R.people[m.person].label]);
     for (const o of Object.values(S.done).filter(d => d && (d.move || d.cancel) && d.week === W.week)) items.push([o.date, o.cancel ? "Laundry load " + (o.load + 1) + " cancelled" : "Laundry load " + (o.load + 1) + " moved to " + E.dow(o.date)]);
-    for (const o of Object.values(S.done).filter(d => d && d.back && !d.deleted && d.week === W.week)) items.push([o.date, "Was done, ticked later by Mama · " + (o.label || o.chore) + " · " + ((R.people[o.person] || {}).label || "")]);
+    for (const o of Object.values(S.done).filter(d => d && d.back && !d.deleted && d.week === W.week)) items.push([o.date, "Was done, ticked later by Mama · " + (o.label || o.chore) + " · " + (o.covered && o.owner ? "🛟 " + ((R.people[o.person] || {}).label || "") + " for " + ((R.people[o.owner] || {}).label || "") : ((R.people[o.person] || {}).label || ""))]);
     const red = overdueList();
     items.sort((x, y) => (x[0] < y[0] ? -1 : 1));
     main.appendChild(sec("This week's log", h("div", { class: "list" },
@@ -2696,25 +2696,37 @@
     }
     return out;
   }
-  async function wasDone(a) {
+  // who = someone other than the owner: recorded as 🛟 covered on that day (minutes to them, a miss for the owner), same rule as Covered (Mama, 18 Nov 19:23)
+  async function wasDone(a, who) {
     const d = redDay(a), at = new Date(d + "T12:00:00").toISOString(), person = effPerson(a), back = { back: true, by: S.me, backAt: new Date().toISOString(), label: a.label };
+    if (who && who !== person) {
+      if (a.bathDay) await store.writeDone(a.id, Object.assign({ id: a.id, daily: true, zone: a.zoneRef, chore: a.chore, person: who, owner: person, covered: true, minutes: 0, counts: false, date: d, week: a.week, at }, back));
+      else await store.writeDone(a.id, Object.assign({ id: a.id, chore: a.chore, person: who, owner: person, covered: true, minutes: a.minutes || 0, measured: null, date: d, week: a.week, at }, back));
+      if (a.ask) { const x = S.asks.find(y => y.id === a.askId); if (x) await store.writeAsk(Object.assign({}, x, { status: "covered", coveredBy: who, coveredAt: at })); }
+      store.log({ type: "cover", chore: a.chore, label: a.label, owner: person, by: who, date: d, back: true });
+      return;
+    }
     if (a.ask) { const x = S.asks.find(y => y.id === a.askId); if (x) store.writeAsk(Object.assign({}, x, { status: "done", doneAt: at, doneDate: d })); }
     if (a.bathDay) await store.writeDone(a.id, Object.assign({ id: a.id, daily: true, zone: a.zoneRef, chore: a.chore, person, minutes: 0, counts: false, measured: null, date: d, week: a.week, at }, back));
     else { const claimedCook = a.chore === "cook" && S.done[a.id + ":override"];
       await store.writeDone(a.id, Object.assign({ id: a.id, chore: a.chore, person, minutes: (a.counts === false && !claimedCook) ? 0 : a.minutes, measured: null, focus: null, bucket: a.minutes, check: false, date: d, week: a.week, fixed: !!a.fixed, at }, back)); }
     store.log({ type: "wasDone", chore: a.chore, label: a.label, person, date: d, by: S.me });
   }
-  function openReds() { S._reds = {}; redsSheet(); }
+  function openReds() { S._reds = {}; S._redsPick = null; redsSheet(); }
   function redsSheet() {
     if (!isMgr()) return;
     const marked = S._reds || (S._reds = {}), keepTop = $("#sheetbg").classList.contains("on") ? $("#sheet").scrollTop : 0;
     const red = redList(), all = red.concat(Object.values(marked).filter(a => !red.some(x => x.id === a.id)));
     const dtxt = (d) => { const dt = E.parse(d); return E.dow(d) + " " + dt.getDate() + " " + dt.toLocaleString("en-CA", { month: "short" }); };
-    const row = (a) => { const ok = !!marked[a.id] && !!S.done[a.id];
-      return h("div", { class: "li" + (ok ? " done" : " overdue") }, h("div", {}, h("div", { class: "n" }, a.label.replace(" · by 5 pm", "")), h("div", { class: "s" }, ok ? "counted as done on " + dtxt(redDay(a)) + ", on time" : dtxt(redDay(a)) + (a.ask ? " · ask" : "") + " · not ticked")),
+    const lbl = (p) => (R.people[p] || { label: p }).label;
+    const row = (a) => { const ok = !!marked[a.id] && !!S.done[a.id], dn = S.done[a.id] || {}, cv = ok && dn.covered && dn.person !== effPerson(a), pick = !ok && S._redsPick === a.id;
+      const li = h("div", { class: "li" + (ok ? " done" : " overdue") }, h("div", {}, h("div", { class: "n" }, a.label.replace(" · by 5 pm", "")), h("div", { class: "s" }, cv ? "🛟 done by " + lbl(dn.person) + " on " + dtxt(redDay(a)) + " · minutes to " + lbl(dn.person) : ok ? "counted as done on " + dtxt(redDay(a)) + ", on time" : dtxt(redDay(a)) + (a.ask ? " · ask" : "") + " · not ticked")),
         ok ? h("button", { class: "btn quiet sm", onclick: async () => { delete marked[a.id]; await undo(a); redsSheet(); } }, "Undo")
-           : h("button", { class: "btn sm", onclick: async () => { marked[a.id] = a; await wasDone(a); redsSheet(); } }, "✓ Was done")); };
-    const kids = [h("h3", {}, "🔴 Go over reds"), h("p", { class: "note" }, "Jobs from the last 2 weeks whose day ended without a Done. Tap ✓ Was done if it really was done: it then counts on its own day, on time (minutes, 🔥 night, review). Leave the rest red.")];
+           : h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end" }, h("button", { class: "btn sm", onclick: async () => { marked[a.id] = a; S._redsPick = null; await wasDone(a); redsSheet(); } }, "✓ Was done"),
+               h("button", { class: "btn quiet sm", title: "Done by someone else", onclick: () => { S._redsPick = pick ? null : a.id; redsSheet(); } }, "🛟 By…")));
+      if (!pick) return li;
+      return h("div", {}, li, h("div", { class: "pick", style: "margin:6px 0 4px" }, h("span", { class: "note", style: "align-self:center" }, "Done by:"), coverers(a).map(p => h("button", { onclick: async () => { marked[a.id] = a; S._redsPick = null; await wasDone(a, p); redsSheet(); } }, lbl(p))))); };
+    const kids = [h("h3", {}, "🔴 Go over reds"), h("p", { class: "note" }, "Jobs from the last 2 weeks whose day ended without a Done. Tap ✓ Was done if the owner really did it: it then counts on its own day, on time (minutes, 🔥 night, review). Tap 🛟 By… if someone else did it: the minutes go to them, and for the owner it stays a miss, like Covered. Leave the rest red.")];
     if (!all.length) kids.push(h("p", { class: "note" }, "Nothing red in the last 2 weeks."));
     for (const p of R.order) { const xs = all.filter(a => effPerson(a) === p).sort((x, y) => (redDay(x) < redDay(y) ? 1 : redDay(x) > redDay(y) ? -1 : 0)); if (!xs.length) continue;
       const left = xs.filter(a => !(marked[a.id] && S.done[a.id])).length;
