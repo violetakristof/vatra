@@ -367,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1794858695"></script>
-<script src="./engine.js?v=1794858695"></script>
-<script>window.VATRA_BUILD="1794858695";</script>
+<script src="./rules.js?v=1795047582"></script>
+<script src="./engine.js?v=1795047582"></script>
+<script>window.VATRA_BUILD="1795047582";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -2181,7 +2181,7 @@
     if (a.note) parts.push(a.note);
     if (st === "locked") parts.push("waits for " + (A(a.dependsOn) || {}).label);
     else if (st === "done" && (S.done[a.id] || {}).covered) { const d = S.done[a.id]; parts.push(d.person === effPerson(a) ? "done" : "🛟 covered by " + ((R.people[d.person] || {}).label || d.person)); }
-    else if (st === "done") { const d = S.done[a.id] || {}; parts.push((doneLate(a) ? "done late" : "done") + helpedBy(a) + (d.focus ? " · " + d.focus + " min 🍅" : "") + (d.real && d.pace !== "ok" ? " · took ~" + d.real + " min" : "")); }
+    else if (st === "done") { const d = S.done[a.id] || {}; parts.push((doneLate(a) ? "done late" : d.back ? "done · ticked later by Mama" : "done") + helpedBy(a) + (d.focus ? " · " + d.focus + " min 🍅" : "") + (d.real && d.pace !== "ok" ? " · took ~" + d.real + " min" : "")); }
     else if (st === "passed") parts.push("passed");
     else if (st === "missed") parts.push("not taken");
     else if (a.minutes && a.counts !== false) parts.push("~" + a.minutes + " min");
@@ -2353,6 +2353,7 @@
     if (isBoard()) main.appendChild(h("div", { class: "note", style: "text-align:right" }, h("button", { class: "btn quiet sm", onclick: () => { localStorage.removeItem("vatra.me"); S.me = null; render(); } }, "This device: Kitchen board · change")));
     const od = overdueList();
     if (od.length) main.appendChild(h("div", { class: "redrow", style: "background:var(--red);color:#fff;border-radius:12px;padding:10px 14px;gap:16px;flex-wrap:wrap;font-size:14px" }, od.map(o => h("span", {}, h("b", {}, R.people[o.person].label), " · " + o.what))));
+    { const rb = redsBtn("btn quiet sm", "margin:6px 0 2px"); if (rb) main.appendChild(rb); }
   }
 
   /* laundryTile removed 7 Nov (unused) */
@@ -2361,6 +2362,7 @@
 
 
   function mine(main) {
+    { const rb = redsBtn("btn quiet sm", "margin-bottom:8px"); if (rb) main.appendChild(rb); }
     chefConfetti(S.today);
     { const r = nightOf(S.me, S.today); const n = streakOf(S.me);
       if (r === "hit") { document.body.classList.add("pinkday"); main.appendChild(h("div", { class: "pinkbar" }, "All done tonight ✨", h("div", { style: "font-size:13px;font-weight:500" }, (nightTiles(S.today).some(t => t.p === S.me && t.a.chore === "cook") && chefCut(S.me, S.today) === CHEF_BY ? "Chef before 8 pm" : "Before 11 pm") + " · " + fireTxt(S.me) + " this week"))); confetti("me:" + S.me + ":" + S.today); }
@@ -2426,6 +2428,7 @@
   }
   function sundayView(main) {
     const W = V();
+    { const rb = redsBtn("btn quiet", "width:100%;margin-bottom:10px"); if (rb) main.appendChild(rb); } // Mama: go over the reds before reading the review
     // the scoring week ends on Saturday, so Sunday's review has the full week (Mama, 7 Nov 22:02)
     const rvEnd = E.dow(S.today) === "Sat" ? S.today : E.addDays(S.today, -((["Sun", "Mon", "Tue", "Wed", "Thu", "Fri"].indexOf(E.dow(S.today))) + 1));
     const led = E.ledger(R, Object.values(S.done), rvEnd);
@@ -2517,6 +2520,7 @@
     for (const o of Object.values(S.done).filter(d => d && d.pass && d.week === W.week)) items.push([o.date, "Passed · " + (o.chore === "grandparents" ? "Grandparents" : "Sous-chef") + " · " + R.people[o.person].label]);
     for (const m of messList(W.week)) items.push([m.date, "Bathroom mess · " + R.people[m.person].label]);
     for (const o of Object.values(S.done).filter(d => d && (d.move || d.cancel) && d.week === W.week)) items.push([o.date, o.cancel ? "Laundry load " + (o.load + 1) + " cancelled" : "Laundry load " + (o.load + 1) + " moved to " + E.dow(o.date)]);
+    for (const o of Object.values(S.done).filter(d => d && d.back && !d.deleted && d.week === W.week)) items.push([o.date, "Was done, ticked later by Mama · " + (o.label || o.chore) + " · " + ((R.people[o.person] || {}).label || "")]);
     const red = overdueList();
     items.sort((x, y) => (x[0] < y[0] ? -1 : 1));
     main.appendChild(sec("This week's log", h("div", { class: "list" },
@@ -2678,8 +2682,48 @@
     el.addEventListener("mousedown", startP); el.addEventListener("mouseup", cancel); el.addEventListener("mouseleave", cancel);
     el.addEventListener("contextmenu", (e) => { e.preventDefault(); fn(); });
   }
+  // 🔴 Go over reds (Mama, 18 Nov 19:15: "go over red tiles that were done, but not marked done for various reasons").
+  // Every job whose day ended without a Done, last 2 weeks. "✓ Was done" counts it on its own day, on time (minutes, 🔥 night, review). Mama only.
+  const redDay = (a) => a.date || a.due;
+  function redList() {
+    if (!S.week) return [];
+    const from = E.addDays(S.today, -14), seen = {}, out = [];
+    const pool = [].concat(PV() ? PV().assignments : [], V().assignments).filter(okBath).concat(askTiles());
+    for (const a of pool) {
+      const d = redDay(a); if (!d || d >= S.today || d < from || (R.startDate && d < R.startDate) || seen[a.id]) continue; seen[a.id] = 1;
+      if (a.optional || a.unassigned || a.kind === "zone" || a.kind === "arrival" || a.kind === "streak" || a.chore === "menu" || (a.auto && a.chore !== "cook")) continue;
+      if (st_(a) === "overdue") out.push(a);
+    }
+    return out;
+  }
+  async function wasDone(a) {
+    const d = redDay(a), at = new Date(d + "T12:00:00").toISOString(), person = effPerson(a), back = { back: true, by: S.me, backAt: new Date().toISOString(), label: a.label };
+    if (a.ask) { const x = S.asks.find(y => y.id === a.askId); if (x) store.writeAsk(Object.assign({}, x, { status: "done", doneAt: at, doneDate: d })); }
+    if (a.bathDay) await store.writeDone(a.id, Object.assign({ id: a.id, daily: true, zone: a.zoneRef, chore: a.chore, person, minutes: 0, counts: false, measured: null, date: d, week: a.week, at }, back));
+    else { const claimedCook = a.chore === "cook" && S.done[a.id + ":override"];
+      await store.writeDone(a.id, Object.assign({ id: a.id, chore: a.chore, person, minutes: (a.counts === false && !claimedCook) ? 0 : a.minutes, measured: null, focus: null, bucket: a.minutes, check: false, date: d, week: a.week, fixed: !!a.fixed, at }, back)); }
+    store.log({ type: "wasDone", chore: a.chore, label: a.label, person, date: d, by: S.me });
+  }
+  function openReds() { S._reds = {}; redsSheet(); }
+  function redsSheet() {
+    if (!isMgr()) return;
+    const marked = S._reds || (S._reds = {}), keepTop = $("#sheetbg").classList.contains("on") ? $("#sheet").scrollTop : 0;
+    const red = redList(), all = red.concat(Object.values(marked).filter(a => !red.some(x => x.id === a.id)));
+    const dtxt = (d) => { const dt = E.parse(d); return E.dow(d) + " " + dt.getDate() + " " + dt.toLocaleString("en-CA", { month: "short" }); };
+    const row = (a) => { const ok = !!marked[a.id] && !!S.done[a.id];
+      return h("div", { class: "li" + (ok ? " done" : " overdue") }, h("div", {}, h("div", { class: "n" }, a.label.replace(" · by 5 pm", "")), h("div", { class: "s" }, ok ? "counted as done on " + dtxt(redDay(a)) + ", on time" : dtxt(redDay(a)) + (a.ask ? " · ask" : "") + " · not ticked")),
+        ok ? h("button", { class: "btn quiet sm", onclick: async () => { delete marked[a.id]; await undo(a); redsSheet(); } }, "Undo")
+           : h("button", { class: "btn sm", onclick: async () => { marked[a.id] = a; await wasDone(a); redsSheet(); } }, "✓ Was done")); };
+    const kids = [h("h3", {}, "🔴 Go over reds"), h("p", { class: "note" }, "Jobs from the last 2 weeks whose day ended without a Done. Tap ✓ Was done if it really was done: it then counts on its own day, on time (minutes, 🔥 night, review). Leave the rest red.")];
+    if (!all.length) kids.push(h("p", { class: "note" }, "Nothing red in the last 2 weeks."));
+    for (const p of R.order) { const xs = all.filter(a => effPerson(a) === p).sort((x, y) => (redDay(x) < redDay(y) ? 1 : redDay(x) > redDay(y) ? -1 : 0)); if (!xs.length) continue;
+      const left = xs.filter(a => !(marked[a.id] && S.done[a.id])).length;
+      kids.push(h("div", { class: "label", style: "margin-top:12px" }, R.people[p].label + " · " + (left ? left + " red" : "all cleared")), h("div", { class: "list" }, xs.map(row))); }
+    sheet(...kids); S.sheetKeep = true; $("#sheet").scrollTop = keepTop;
+  }
+  const redsBtn = (cls, style) => { if (!isMgr() || isBoard()) return null; const n = redList().length; return n ? h("button", { class: cls || "btn quiet", style: style || "", onclick: openReds }, "🔴 Go over reds · " + n) : null; };
   function redColumn(od) {
-    return h("div", { class: "redcol" }, h("div", { class: "label" }, "Overdue"), od.map(o => h("div", { class: "redtile" }, h("div", { class: "n" }, R.people[o.person].label), h("div", { class: "w" }, o.what), h("div", { class: "s" }, o.laundry ? "over 24 h" : "since " + fmtDay(o.since).replace(/,.*/, "")),
+    return h("div", { class: "redcol" }, h("div", { class: "label" }, "Overdue"), redsBtn("btn quiet sm", "align-self:flex-start"), od.map(o => h("div", { class: "redtile" }, h("div", { class: "n" }, R.people[o.person].label), h("div", { class: "w" }, o.what), h("div", { class: "s" }, o.laundry ? "over 24 h" : "since " + fmtDay(o.since).replace(/,.*/, "")),
       o.a && isMgr() ? h("div", { class: "acts" }, h("button", { class: "btn sm", onclick: () => finish(o.a) }, "Done"), coverBtn(o.a, false), cancelBtn(o.a, "overdue")) : null)),
       h("div", { class: "foot" }, "Stays here until tapped done. Never reassigned on its own."));
   }
