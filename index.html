@@ -367,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1795061919"></script>
-<script src="./engine.js?v=1795061919"></script>
-<script>window.VATRA_BUILD="1795061919";</script>
+<script src="./rules.js?v=1795137919"></script>
+<script src="./engine.js?v=1795137919"></script>
+<script>window.VATRA_BUILD="1795137919";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -2265,6 +2265,15 @@
         un ? null : h("div", { style: "display:flex;gap:4px" }, claim ? [h("button", { class: "btn sm", onclick: () => asWho(claimers, "Who's folding?", (p) => override(a, p, "claim")) }, "Claim"), ...acts(a, st)] : acts(a, st)));
       fx(c, a); markLate(c, a); longPress(c, () => sheetFor(a)); (folded ? doneChips : chips).appendChild(c);
     }
+    // This week: every weekly, weekend and monthly job (shared and personal) that is not in Today, so the whole week is visible on the Board (Mama, 19 Nov 20:24)
+    const wkChips = h("div", { class: "bchips" });
+    { const inToday = new Set(todays.map(a => a.id)); const rk = (a) => (a.own ? 10 : 0) + (["done", "cancelled"].includes(state(a)) ? 5 : 0);
+      const wkJobs = W.assignments.filter(a => !inToday.has(a.id) && !a.bathDay && !["evening", "zone", "arrival", "streak", "laundry"].includes(a.kind) && a.chore !== "menu" && a.chore !== "roomReset" && !(a.unassigned && !S.done[a.id + ":override"]) && (a.kind === "weekly" || a.kind === "monthly" || (!a.date && a.window) || a.chore === "filing" || a.chore === "sheets" || a.chore === "roomDeep" || a.chore === "roomDeclutter"));
+      wkJobs.map((a, i) => [a, i]).sort((x, y) => rk(x[0]) - rk(y[0]) || x[1] - y[1]).forEach(([a]) => {
+        const st = state(a); const when = a.date ? E.dow(a.date) : a.window === "wknd" ? "weekend · by " + E.dow(a.due) : "any day · by " + E.dow(a.due);
+        const c = h("div", { class: "bchip " + st }, h("div", {}, h("div", { class: "k" }, a.label), h("b", {}, (R.people[effPerson(a)] || { label: "—" }).label), h("div", { class: "s", style: "font-size:11px;color:var(--mute)" }, [when, sub(a, st)].filter(Boolean).join(" · "))),
+          h("div", { style: "display:flex;gap:4px" }, acts(a, st)));
+        fx(c, a); markLate(c, a); longPress(c, () => sheetFor(a)); wkChips.appendChild(c); }); }
     // everything else anyone finished today goes into ✓ Done today too: My Room Deep, Sheets, Inbox, Reset, weekly jobs done early… (Mama, 8 Nov 02:07)
     { const seen = new Set(todays.map(a => a.id)); const pool = [].concat(W.assignments, PV() ? PV().assignments : []).filter(okBath);
       for (const a of pool) { if (seen.has(a.id) || ["evening", "zone", "arrival", "streak"].includes(a.kind) || a.bathDay || a === gb || a.chore === "dishPrep") continue;
@@ -2272,6 +2281,7 @@
         const c = h("div", { class: "bchip done" }, h("div", {}, h("div", { class: "k" }, a.label), h("b", {}, (R.people[dd.person] || R.people[effPerson(a)] || { label: "" }).label), h("div", { class: "s", style: "font-size:11px;color:var(--mute)" }, "✓ " + (dd.at ? new Date(dd.at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).toLowerCase() : "done"))));
         longPress(c, () => sheetFor(a)); doneChips.appendChild(c); } }
     if (chips.children.length) main.appendChild(sec("Today", chips));
+    if (wkChips.children.length) main.appendChild(sec("This week", wkChips));
     if (doneChips.children.length) main.appendChild(foldBox("✓ Done today (" + doneChips.children.length + ")", [doneChips], "_boardDoneOpen"));
     { const eb = todoErrBanner(); if (eb) main.appendChild(eb);
       main.appendChild(sec("To-do · so we don't forget", h("div", { class: "btodo" }, R.order.map(p => { const tl = todosOf(p); return h("div", { class: "col", style: "border-top-color:" + PCOL[p] }, h("div", { class: "pn" }, pdot(p), plabel(p), tl.some(isUrgTodo) ? h("span", { style: "margin-left:auto;color:var(--red);font-size:14px" }, "🔴 " + tl.filter(isUrgTodo).length) : null), tl.length ? tl.map(todoRow) : h("div", { class: "note", style: "padding:0 2px" }, "—")); })))); }
