@@ -367,9 +367,9 @@
   .legend2 { font-size:11.5px; color:var(--mute); margin-top:4px; }
 .shopurg{white-space:nowrap;background:#d64545!important;color:#fff!important;border-color:#d64545!important;font-weight:700;animation:shopPulse 1.6s ease-in-out infinite}@keyframes shopPulse{0%,100%{box-shadow:0 0 0 0 rgba(214,69,69,.55)}50%{box-shadow:0 0 0 6px rgba(214,69,69,0)}}
 </style>
-<script src="./rules.js?v=1795235710"></script>
-<script src="./engine.js?v=1795235710"></script>
-<script>window.VATRA_BUILD="1795235710";</script>
+<script src="./rules.js?v=1795237273"></script>
+<script src="./engine.js?v=1795237273"></script>
+<script>window.VATRA_BUILD="1795237273";</script>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.png">
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1733,15 +1733,17 @@
     inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
     const ex = () => v.find(x => x.date === sel);
     const saveBtn = h("button", { class: "btn", onclick: async () => { const e0 = ex(); await store.writeGym(Object.assign({ id: "gym_" + p + "_" + sel, gym: true, kind: "visit", person: p, date: sel, by: S.me, at: new Date().toISOString() }, e0 || {}, { note: inp.value.trim() || null })); gymSheet(p, sel); } });
+    // Mama, 21 Nov 00:00: a habit ticked by mistake must be easy to undo - same "Undo this day" button as the other habits
+    const undoBtn = h("button", { class: "btn quiet", onclick: async () => { const e0 = ex(); if (e0) { await store.deleteGym(e0.id); gymSheet(p, sel); } } }, "Undo this day");
     const dayRow = h("div", { class: "pick" });
-    const draw = () => { dayRow.innerHTML = ""; for (const d of days) dayRow.appendChild(h("button", { class: d === sel ? "on" : "", onclick: () => { sel = d; draw(); } }, (d === S.today ? "Today" : E.dow(d)) + (v.some(x => x.date === d) ? " ✓" : ""))); const e0 = ex(); inp.value = e0 && e0.note ? e0.note : ""; saveBtn.textContent = e0 ? "Save note" : "I went · log it"; };
+    const draw = () => { dayRow.innerHTML = ""; for (const d of days) dayRow.appendChild(h("button", { class: d === sel ? "on" : "", onclick: () => { sel = d; draw(); } }, (d === S.today ? "Today" : E.dow(d)) + (v.some(x => x.date === d) ? " ✓" : ""))); const e0 = ex(); inp.value = e0 && e0.note ? e0.note : ""; saveBtn.textContent = e0 ? "Save note" : "I went · log it"; undoBtn.style.display = e0 ? "" : "none"; };
     draw();
     const bank = gymBank(p, wk), owe = gymOwes(p, v.length + bank);
     sheet(h("h3", {}, "🏋️ Gym · " + R.people[p].label),
       h("p", { class: "note" }, v.length + " of " + GYM_GOAL + " this week." + (bank ? " Plus 1 banked from last week." : "") + (v.length > GYM_GOAL ? " 1 visit banked for next week." : "") + (GYM_FEE[p] ? " " + gymTerms(p) + (owe ? " So far this week: " + gymMoney(owe) + "." : " This week is covered.") : "")),
       can ? h("div", {}, h("div", { class: "label" }, "Which day"), dayRow) : null,
       can ? h("div", {}, h("div", { class: "label" }, "What you did"), inp) : null,
-      can ? saveBtn : null,
+      can ? h("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, saveBtn, undoBtn) : null,
       h("div", { class: "label" }, "This week"),
       v.length ? h("div", { class: "list" }, v.map(x => h("div", { class: "li" }, h("div", {}, h("div", { class: "n" }, fmtDay(x.date)), h("div", { class: "s" }, x.note || "no note")),
         can ? h("button", { class: "btn quiet sm xbtn", title: "Remove this visit", onclick: async () => { await store.deleteGym(x.id); gymSheet(p, sel); } }, "✕") : null))) : h("p", { class: "note" }, "No visits yet."),
@@ -1797,11 +1799,11 @@
   function habitStrip(p) {
     const wk = monday(), hs = habitsFor(p);
     const chip = (x) => { const v = habOf(x, p, wk), today = v.find(d => d.date === S.today); let held = false; // a hold opens the sheet; the click that follows the release must not tick the habit
-      const b = h("button", { title: x.label + " · hold for the week", style: "min-height:76px;min-width:0;border-radius:14px;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;" + (today ? "border:1.5px solid var(--green);background:var(--green);color:#fff" : "border:1.5px dashed var(--soft2);background:var(--card);color:var(--ink)"),
+      const b = h("button", { title: x.label + " · tap again to undo · hold for the week", style: "min-height:76px;min-width:0;border-radius:14px;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;" + (today ? "border:1.5px solid var(--green);background:var(--green);color:#fff" : "border:1.5px dashed var(--soft2);background:var(--card);color:var(--ink)"),
         onclick: () => { if (held) { held = false; return; } if (x.key === "gym") return gymSheet(p); if (x.read) return habitSheet(x, p); if (today) store.deleteGym(today.id); else habSet(x, p, S.today); } },
         h("span", { style: "font-size:20px;line-height:1" }, x.icon), h("span", { style: "font-size:12px;font-weight:700;line-height:1.15;text-align:center" }, x.label), h("span", { style: "font-size:11px;" + (today ? "" : "color:var(--mute)") }, v.length + " of " + x.goal + (x.key === "gym" && gymBank(p, wk) ? " +1" : "")));
       if (x.key !== "gym") longPress(b, () => { held = true; setTimeout(() => { held = false; }, 900); habitSheet(x, p); }); return b; };
-    return h("div", { style: "margin-bottom:12px" }, h("div", { class: "label", style: "display:flex;justify-content:space-between" }, h("span", {}, "Habits"), h("span", { style: "font-weight:500;text-transform:none;letter-spacing:0" }, "tap = done today · hold = the week")),
+    return h("div", { style: "margin-bottom:12px" }, h("div", { class: "label", style: "display:flex;justify-content:space-between" }, h("span", {}, "Habits"), h("span", { style: "font-weight:500;text-transform:none;letter-spacing:0" }, "tap = done · tap again = undo · hold = week")),
       (() => { const kids = hs.map(chip); if (S.me === p && personalCount(p) < PERSONAL_MAX) kids.push(h("button", { title: "Add a habit of your own", style: "min-height:76px;min-width:0;border-radius:14px;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px;border:1.5px dotted var(--soft2);background:transparent;color:var(--mute)", onclick: () => addHabitSheet(p) }, h("span", { style: "font-size:22px;line-height:1" }, "＋"), h("span", { style: "font-size:12px;font-weight:700" }, "My own")));
         return h("div", { style: "display:grid;grid-template-columns:repeat(" + Math.min(kids.length, 5) + ",minmax(0,1fr));gap:6px" }, kids); })());
   }
