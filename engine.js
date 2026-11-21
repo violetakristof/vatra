@@ -151,7 +151,7 @@
       let fin = lowest(noRepeat(rules.qual.finisherDefault.filter(p => p !== dishes && !isAway(p, date)), prevFin), "fin" + date);
       if (!fin) fin = "Tata";
       prevFin = fin;
-      mk({ kind: "evening", role: "finisher", chore: "finisher", label: "Finisher + pack lunches", person: fin, date, due: date, minutes: B.L, dependsOn: dishesA.id });
+      mk({ kind: "evening", role: "finisher", chore: "finisher", label: d === "Fri" ? "Finisher" : "Finisher + pack lunches", person: fin, date, due: date, minutes: B.L, dependsOn: dishesA.id });
       const scCands = rules.qual.sousChef.filter(p => p !== dishes && p !== fin && !isAway(p, date));
       if (scCands.length) {
         const sc = scCands[mod(w * 7 + i, scCands.length)];

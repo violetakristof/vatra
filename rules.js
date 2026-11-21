@@ -1,6 +1,6 @@
 // Vatra rule pack v1.1 - the household's rules as data. The engine never hardcodes a name.
 window.VATRA_RULES = {
-  version: "1.19",
+  version: "1.20",
   house: "Vatra",
   tz: "America/Toronto",
   epochMonday: "2026-11-09",
@@ -67,6 +67,7 @@ window.VATRA_RULES = {
     arrival: "Coat and shoes in their places, bag unpacked, mail and papers into the paper box, containers and utensils in the dishwasher, clothes sorted: dirty in the laundry basket, clean on hangers or in drawers.",
     souschef: "Help Tata cook. Optional: pass with one tap, no penalty.",
     dishes: "After dinner: pick up everything from the table and around it, table cleared and wiped, dishes scraped, dishwasher loaded and running, pots washed, leftovers away, kitchen garbage out. Done = nothing left to wash.",
+    finisherFri: "Friday: no lunches to pack. Counters and sink shining, stove top, floor swept, chairs in. Done = kitchen looks uncooked-in.",
     finisher: "Counters and sink shining, stove top, floor swept, chairs in, everyone's lunches for tomorrow packed with the clean container sets and the fruit. Done = kitchen looks uncooked-in, lunches in the fridge.",
     bathLight: "Sink and counter wiped, towels hung, toilet quick wipe, bin if full, floor clear. Done = guest-ready. House rule for everyone: leave the bathroom usable (hair out of the drain, towel hung, counter wiped if you splashed, nothing on the floor). The owner can flag a mess.",
     entryways: "Offload areas on both floors. Downstairs: shoes paired and put away. Upstairs: cubbies tidy, mirror shelf bare except the basket, nothing on the floor or railing. Paper box: mail sorted, everything scanned into the inbox, originals recycled or into the keep box. Strays: cubby, room, or recycling.",
@@ -119,6 +120,7 @@ window.VATRA_RULES = {
     souschef: "Help Tata cook. Pass if you can't.",
     dishes: "After dinner: pick up and clear the table, scrape, load and run the dishwasher, wash pots, leftovers away, kitchen garbage out.",
     finisher: "After Dinner Service: counters and sink shining, stove top, sweep, chairs in, pack everyone's lunches for tomorrow.",
+    finisherFri: "After Dinner Service: counters and sink shining, stove top, sweep, chairs in. No lunches on Friday.",
     arrival: "Coat and shoes in their places, bag unpacked, papers in the paper box, containers in the dishwasher, dirty clothes in the basket, clean clothes hung or put away.",
     bathLight: "Daily: sink and counter wiped, towels hung, toilet quick wipe, floor clear.",
     entryways: "Daily: shoes downstairs, cubbies and mirror shelf upstairs, paper box scanned into the inbox.",
